@@ -44,9 +44,11 @@ def fill_scores(teams):
                     break
         team.games['OPP_PTS'] = team.games['OPP_PTS'].astype(int)
 
-def least_squares(teams, SCORE_CAP=15):
-    XX = np.zeros((len(teams), len(teams)))
-    ratings = np.zeros(len(teams))
+def least_squares(teams, SCORE_CAP=15, HOME_ADV=True):
+    nteam = len(teams)
+    neq = nteam+1 if HOME_ADV else nteam
+    XX = np.zeros((neq, neq))
+    ratings = np.zeros(neq)
     for i, team_id in enumerate(IDS):
         for game_id, game in teams[i].games.iterrows():
             opp_idx = IDS.index(game['OPP_ID'])
@@ -56,28 +58,49 @@ def least_squares(teams, SCORE_CAP=15):
             # Store "Game Outcome Measure":
             teams[i].games.loc[game_id,'GOM'] = points
             ratings[i] += points
+
+            if HOME_ADV:
+                if 'vs.' in game['MATCHUP']: # Home game
+                    teams[i].games.loc[game_id,'LOC'] = 1.0
+                    XX[i,-1] += 1.0
+                    # Home totals:
+                    XX[-1,-1] += 1.0
+                    ratings[-1] += points
+                else: # Away game
+                    teams[i].games.loc[game_id,'LOC'] = -1.0
+                    XX[i,-1] -= 1.0
+                    
         XX[i,i] = len(teams[i].games)
 
-    # Replace last equation to force sum(ratings)=0:
-    XX[-1,:] = 1.0
-    ratings[-1] = 0.0
+    # Replace last team equation to force sum(ratings)=0:
+    XX[nteam-1,:] = 1.0
+    ratings[nteam-1] = 0.0
 
     ratings = np.linalg.solve(XX, ratings)
 
-    # Add "Normalized Score" to team data.  This is essentially how much was "earned" for each game
+    # Add "Normalized Score" to team data.  This is essentially how
+    # much was "earned" for each game.
     for team in teams:
         for game_id, game in team.games.iterrows():
             opp_idx = IDS.index(game['OPP_ID'])
             opp_rating = ratings[opp_idx]
             team.games.loc[game_id,'NS'] = game['GOM'] + opp_rating
-    
-    return ratings
+            if HOME_ADV:
+                # Including home advantage in the normalized score is
+                # consistent with the rating being equal to the mean
+                # of the normalized scores.
+                team.games.loc[game_id,'NS'] -= game['LOC']*ratings[-1]
+
+    if HOME_ADV:
+        return ratings[:-1], ratings[-1]
+    else:
+        return ratings, None
         
 
 if __name__ == '__main__':
     teams = [Team(id) for id in IDS]
     fill_scores(teams)
-    ratings = least_squares(teams)
+    ratings, home_adv = least_squares(teams)
     ratings = pd.DataFrame({'rating':ratings}, index=[t.name for t in teams])
     ratings = ratings.sort_values(by='rating', ascending=False)
     
