@@ -9,6 +9,7 @@ SEASON='2017-18'
 # Define internal ordering for computations:
 TEAM_ABBRVS = sorted(nba_py.constants.TEAMS)
 IDS = [nba_py.constants.TEAMS[t]['id'] for t in TEAM_ABBRVS]
+SPURS_IDX = TEAM_ABBRVS.index('SAS')
 
 
 class Team:
@@ -52,6 +53,8 @@ def least_squares(teams, SCORE_CAP=15):
             XX[i,opp_idx] -= 1.0
             points = game['PTS'] - game['OPP_PTS']
             points = np.sign(points) * min(SCORE_CAP, abs(points)) # Truncates
+            # Store "Game Outcome Measure":
+            teams[i].games.loc[game_id,'GOM'] = points
             ratings[i] += points
         XX[i,i] = len(teams[i].games)
 
@@ -60,6 +63,14 @@ def least_squares(teams, SCORE_CAP=15):
     ratings[-1] = 0.0
 
     ratings = np.linalg.solve(XX, ratings)
+
+    # Add "Normalized Score" to team data.  This is essentially how much was "earned" for each game
+    for team in teams:
+        for game_id, game in team.games.iterrows():
+            opp_idx = IDS.index(game['OPP_ID'])
+            opp_rating = ratings[opp_idx]
+            team.games.loc[game_id,'NS'] = game['GOM'] + opp_rating
+    
     return ratings
         
 
