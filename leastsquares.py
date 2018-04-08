@@ -49,69 +49,74 @@ class League:
                         break
             team.games['OPP_PTS'] = team.games['OPP_PTS'].astype(int)
 
-def least_squares(teams, SCORE_CAP=15, HOME_ADV=True):
-    nteam = len(teams)
-    neq = nteam+1 if HOME_ADV else nteam
-    XX = np.zeros((neq, neq))
-    ratings = np.zeros(neq)
-    for i, team_id in enumerate(IDS):
-        for game_id, game in teams[i].games.iterrows():
-            opp_idx = IDS.index(game['OPP_ID'])
-            XX[i,opp_idx] -= 1.0
-            points = game['PTS'] - game['OPP_PTS']
-            points = np.sign(points) * min(SCORE_CAP, abs(points)) # Truncates
-            # Store "Game Outcome Measure":
-            teams[i].games.loc[game_id,'GOM'] = points
-            ratings[i] += points
+class LeastSquares(League):
+    def __init__(self):
+        super().__init__()
+        self.fit_ratings()
 
-            if HOME_ADV:
-                if 'vs.' in game['MATCHUP']: # Home game
-                    teams[i].games.loc[game_id,'LOC'] = 1.0
-                    XX[i,-1] += 1.0
-                    # Home totals:
-                    XX[-1,-1] += 1.0
-                    ratings[-1] += points
-                else: # Away game
-                    teams[i].games.loc[game_id,'LOC'] = -1.0
-                    XX[i,-1] -= 1.0
-                    
-        XX[i,i] = len(teams[i].games)
+    def fit_ratings(self, SCORE_CAP=15, HOME_ADV=True):
+        nteam = len(self.teams)
+        neq = nteam+1 if HOME_ADV else nteam
+        XX = np.zeros((neq, neq))
+        ratings = np.zeros(neq)
+        for i, team_id in enumerate(IDS):
+            for game_id, game in self.teams[i].games.iterrows():
+                opp_idx = IDS.index(game['OPP_ID'])
+                XX[i,opp_idx] -= 1.0
+                points = game['PTS'] - game['OPP_PTS']
+                points = np.sign(points) * min(SCORE_CAP, abs(points)) # Truncates
+                # Store "Game Outcome Measure":
+                self.teams[i].games.loc[game_id,'GOM'] = points
+                ratings[i] += points
 
-    # Replace last team equation to force sum(ratings)=0:
-    XX[nteam-1,:nteam] = 1.0
-    ratings[nteam-1] = 0.0
+                if HOME_ADV:
+                    if 'vs.' in game['MATCHUP']: # Home game
+                        self.teams[i].games.loc[game_id,'LOC'] = 1.0
+                        XX[i,-1] += 1.0
+                        # Home totals:
+                        XX[-1,-1] += 1.0
+                        ratings[-1] += points
+                    else: # Away game
+                        self.teams[i].games.loc[game_id,'LOC'] = -1.0
+                        XX[i,-1] -= 1.0
 
-    ratings = np.linalg.solve(XX, ratings)
+            XX[i,i] = len(self.teams[i].games)
 
-    # Add "Normalized Score" to team data.  This is essentially how
-    # much was "earned" for each game.
-    for team in teams:
-        for game_id, game in team.games.iterrows():
-            opp_idx = IDS.index(game['OPP_ID'])
-            opp_rating = ratings[opp_idx]
-            team.games.loc[game_id,'NS'] = game['GOM'] + opp_rating
-            if HOME_ADV:
-                # Including home advantage in the normalized score is
-                # consistent with the rating being equal to the mean
-                # of the normalized scores.
-                team.games.loc[game_id,'NS'] -= game['LOC']*ratings[-1]
+        # Replace last team equation to force sum(ratings)=0:
+        XX[nteam-1,:nteam] = 1.0
+        ratings[nteam-1] = 0.0
 
-    # Estimate residual standard deviation, which can be used in
-    # probability calculations
-    SS = sum([sum(t.games['NS']**2) for t in teams]) / 2.0 # Divide by two b/c each game counted twice
-    count = sum([len(t.games) for t in teams]) / 2
-    sigma = np.sqrt(SS/count)
+        ratings = np.linalg.solve(XX, ratings)
 
-    if HOME_ADV:
-        return ratings[:-1], ratings[-1], sigma
-    else:
-        return ratings, None, sigma
+        # Add "Normalized Score" to team data.  This is essentially how
+        # much was "earned" for each game.
+        for team in self.teams:
+            for game_id, game in team.games.iterrows():
+                opp_idx = IDS.index(game['OPP_ID'])
+                opp_rating = ratings[opp_idx]
+                team.games.loc[game_id,'NS'] = game['GOM'] + opp_rating
+                if HOME_ADV:
+                    # Including home advantage in the normalized score is
+                    # consistent with the rating being equal to the mean
+                    # of the normalized scores.
+                    team.games.loc[game_id,'NS'] -= game['LOC']*ratings[-1]
+
+        # Estimate residual standard deviation, which can be used in
+        # probability calculations
+        SS = sum([sum(t.games['NS']**2) for t in self.teams]) / 2.0 # Divide by two b/c each game counted twice
+        count = sum([len(t.games) for t in self.teams]) / 2
+        self.sigma = np.sqrt(SS/count)
+
+        if HOME_ADV:
+            self.ratings = ratings[:-1]
+            self.home_adv = ratings[-1]
+        else:
+            self.ratings = ratings
         
 
 if __name__ == '__main__':
-    league = League()
-    rating_vals, home_adv, sigma = least_squares(league.teams)
-    ratings = pd.DataFrame({'rating':rating_vals}, index=[t.name for t in league.teams])
+    lsq = LeastSquares()
+    ratings = pd.DataFrame({'rating':lsq.ratings}, index=[t.name for t in lsq.teams])
     ratings = ratings.sort_values(by='rating', ascending=False)
     
 
