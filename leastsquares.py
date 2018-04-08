@@ -25,24 +25,29 @@ class Team:
         self.games = df.loc[:,['Game_ID','GAME_DATE','MATCHUP','WL','PTS']]
         self.games = self.games.set_index('Game_ID')
 
-def fill_scores(teams):
-    """Fill in opponent scores by matching up game id's
+class League:
+    def __init__(self):
+        self.teams = [Team(id) for id in IDS]
+        self.fill_scores()
+        
+    def fill_scores(self):
+        """Fill in opponent scores by matching up game id's
 
-    Much faster than getting these by pulling down all of the game ID's"""
-    for team in teams:
-        for game_id in team.games.index:
-            for other_team in teams:
-                if team is other_team:
-                    continue
-                try:
-                    pts = other_team.games.loc[game_id,'PTS']
-                except KeyError:
-                    pass
-                else:
-                    team.games.loc[game_id,'OPP_ID'] = other_team.id
-                    team.games.loc[game_id,'OPP_PTS'] = pts
-                    break
-        team.games['OPP_PTS'] = team.games['OPP_PTS'].astype(int)
+        Much faster than getting these by pulling down all of the game ID's"""
+        for team in self.teams:
+            for game_id in team.games.index:
+                for other_team in self.teams:
+                    if team is other_team:
+                        continue
+                    try:
+                        pts = other_team.games.loc[game_id,'PTS']
+                    except KeyError:
+                        pass
+                    else:
+                        team.games.loc[game_id,'OPP_ID'] = other_team.id
+                        team.games.loc[game_id,'OPP_PTS'] = pts
+                        break
+            team.games['OPP_PTS'] = team.games['OPP_PTS'].astype(int)
 
 def least_squares(teams, SCORE_CAP=15, HOME_ADV=True):
     nteam = len(teams)
@@ -104,10 +109,9 @@ def least_squares(teams, SCORE_CAP=15, HOME_ADV=True):
         
 
 if __name__ == '__main__':
-    teams = [Team(id) for id in IDS]
-    fill_scores(teams)
-    rating_vals, home_adv, sigma = least_squares(teams)
-    ratings = pd.DataFrame({'rating':rating_vals}, index=[t.name for t in teams])
+    league = League()
+    rating_vals, home_adv, sigma = least_squares(league.teams)
+    ratings = pd.DataFrame({'rating':rating_vals}, index=[t.name for t in league.teams])
     ratings = ratings.sort_values(by='rating', ascending=False)
     
 
