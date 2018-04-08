@@ -54,7 +54,27 @@ class League:
                         break
             team.games['OPP_PTS'] = team.games['OPP_PTS'].astype(int)
 
-class LeastSquares(League):
+class RatingSystm(League):
+    def __init__(self):
+        super().__init__()
+
+    def evaluate_predicted_wins(self):
+        """Evaluate how many past games are predicted correctly"""
+        count = 0
+        correct = 0
+        for team in self.teams:
+            for game_id, game in team.games.iterrows():
+                count += 1
+                opp_idx = IDS.index(game['OPP_ID'])
+                loc = 1 if 'vs.' in game['MATCHUP'] else 0
+                pred = 'W' if self.predict_win_probability(team, self.teams[opp_idx], loc) > 0.5 else 'L'
+                if pred == game['WL']:
+                    correct += 1
+        count = count / 2
+        correct = correct / 2
+        print('Correct predictions: {} / {}'.format(correct, count))
+                    
+class LeastSquares(RatingSystm):
     def __init__(self):
         super().__init__()
         self.fit_ratings()
@@ -130,16 +150,17 @@ class LeastSquares(League):
         For the least squares system, this is based on normally distributed residuals"""
         mu = team1.rating - team2.rating
         if loc is not None:
-            mu += loc * self.home_adv
+            try:
+                mu += loc * self.home_adv
+            except AttributeError:
+                pass # ratings do not include home_adv
         # 1-normcdf(0,mu) = normcdf(mu)
         return normcdf(mu, sigma=self.sigma)
         
 
 if __name__ == '__main__':
     lsq = LeastSquares()
+    lsq.evaluate_predicted_wins()
     ratings = pd.DataFrame({'rating':lsq.ratings}, index=[t.name for t in lsq.teams])
     ratings = ratings.sort_values(by='rating', ascending=False)
     
-
-            
-        
