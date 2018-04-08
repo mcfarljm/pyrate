@@ -73,7 +73,7 @@ def least_squares(teams, SCORE_CAP=15, HOME_ADV=True):
         XX[i,i] = len(teams[i].games)
 
     # Replace last team equation to force sum(ratings)=0:
-    XX[nteam-1,:] = 1.0
+    XX[nteam-1,:nteam] = 1.0
     ratings[nteam-1] = 0.0
 
     ratings = np.linalg.solve(XX, ratings)
