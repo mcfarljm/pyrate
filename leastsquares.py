@@ -11,6 +11,11 @@ TEAM_ABBRVS = sorted(nba_py.constants.TEAMS)
 IDS = [nba_py.constants.TEAMS[t]['id'] for t in TEAM_ABBRVS]
 SPURS_IDX = TEAM_ABBRVS.index('SAS')
 
+def normcdf(x, mu=0, sigma=1):
+    """Use np.erf so don't need scipy"""
+    z = (x-mu)/sigma
+    return (1.0 + np.erf(z / np.sqrt(2.0))) / 2.0
+
 
 class Team:
     def __init__(self, id):
@@ -112,6 +117,22 @@ class LeastSquares(League):
             self.home_adv = ratings[-1]
         else:
             self.ratings = ratings
+
+        # Store rating attribute for each team
+        for rating,team in zip(self.ratings, self.teams):
+            team.rating = rating
+
+    def predict_win_probability(self, team1, team2, loc=None):
+        """Predict win probability for team1 over team2
+
+        loc: optionally, 1 for home, -1 for away
+
+        For the least squares system, this is based on normally distributed residuals"""
+        mu = team1.rating - team2.rating
+        if loc is not None:
+            mu += loc * self.home_adv
+        # 1-normcdf(0,mu) = normcdf(mu)
+        return normcdf(mu, sigma=self.sigma)
         
 
 if __name__ == '__main__':
