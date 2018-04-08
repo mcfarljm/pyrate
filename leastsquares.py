@@ -29,6 +29,7 @@ class Team:
 
         self.games = df.loc[:,['Game_ID','GAME_DATE','MATCHUP','WL','PTS']]
         self.games = self.games.set_index('Game_ID')
+        self.games['LOC'] = self.games.apply(lambda row: 'H' if 'vs.' in row['MATCHUP'] else 'A', axis=1)
 
 class League:
     def __init__(self):
@@ -51,6 +52,9 @@ class League:
                     else:
                         team.games.loc[game_id,'OPP_ID'] = other_team.id
                         team.games.loc[game_id,'OPP_PTS'] = pts
+
+                        if team.games.loc[game_id,'LOC'] == other_team.games.loc[game_id,'LOC']:
+                            print('Location mismatch:', game_id)
                         break
             team.games['OPP_PTS'] = team.games['OPP_PTS'].astype(int)
 
@@ -67,7 +71,7 @@ class RatingSystm(League):
             for game_id, game in team.games.iterrows():
                 count += 1
                 opp_idx = IDS.index(game['OPP_ID'])
-                loc = 1 if 'vs.' in game['MATCHUP'] else 0
+                loc = 1 if game['LOC']=='H' else -1
                 pred = 'W' if self.predict_win_probability(team, self.teams[opp_idx], loc) > 0.5 else 'L'
                 if pred == 'W':
                     pred_win_count += 1
@@ -88,7 +92,7 @@ class RatingSystm(League):
         for team in self.teams:
             for game_id, game in team.games.iterrows():
                 opp_idx = IDS.index(game['OPP_ID'])
-                loc = 1 if 'vs.' in game['MATCHUP'] else 0
+                loc = 1 if game['LOC']=='H' else -1
                 pred_prob = self.predict_win_probability(team, self.teams[opp_idx], loc)
                 pred_outcome = 'W' if pred_prob > 0.5 else 'L'
                 if pred_prob > 0.5:
@@ -108,7 +112,7 @@ class LeastSquares(RatingSystm):
         super().__init__()
         self.fit_ratings()
 
-    def fit_ratings(self, SCORE_CAP=15, HOME_ADV=False):
+    def fit_ratings(self, SCORE_CAP=15, HOME_ADV=True):
         nteam = len(self.teams)
         neq = nteam+1 if HOME_ADV else nteam
         XX = np.zeros((neq, neq))
@@ -124,14 +128,12 @@ class LeastSquares(RatingSystm):
                 ratings[i] += points
 
                 if HOME_ADV:
-                    if 'vs.' in game['MATCHUP']: # Home game
-                        self.teams[i].games.loc[game_id,'LOC'] = 1.0
+                    if game['LOC'] == 'H': # Home game
                         XX[i,-1] += 1.0
                         # Home totals:
                         XX[-1,-1] += 1.0
                         ratings[-1] += points
                     else: # Away game
-                        self.teams[i].games.loc[game_id,'LOC'] = -1.0
                         XX[i,-1] -= 1.0
 
             XX[i,i] = len(self.teams[i].games)
@@ -153,7 +155,8 @@ class LeastSquares(RatingSystm):
                     # Including home advantage in the normalized score is
                     # consistent with the rating being equal to the mean
                     # of the normalized scores.
-                    team.games.loc[game_id,'NS'] -= game['LOC']*ratings[-1]
+                    loc = 1 if game['LOC']=='H' else -1
+                    team.games.loc[game_id,'NS'] -= loc*ratings[-1]
 
         # Estimate residual standard deviation, which can be used in
         # probability calculations
