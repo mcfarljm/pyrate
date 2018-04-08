@@ -62,24 +62,53 @@ class RatingSystm(League):
         """Evaluate how many past games are predicted correctly"""
         count = 0
         correct = 0
+        pred_win_count = 0
         for team in self.teams:
             for game_id, game in team.games.iterrows():
                 count += 1
                 opp_idx = IDS.index(game['OPP_ID'])
                 loc = 1 if 'vs.' in game['MATCHUP'] else 0
                 pred = 'W' if self.predict_win_probability(team, self.teams[opp_idx], loc) > 0.5 else 'L'
+                if pred == 'W':
+                    pred_win_count += 1
                 if pred == game['WL']:
                     correct += 1
         count = count / 2
         correct = correct / 2
         print('Correct predictions: {} / {}'.format(correct, count))
+        if pred_win_count != count:
+            print('Mismatch for predicted win count:', pred_win_count)
+
+    def evaluate_coverage_probability(self):
+        pvals = np.array([0.5, 0.6, 0.7, 0.8, 0.9])
+        counts = np.zeros(len(pvals), dtype=int)
+        correct = np.zeros(len(pvals), dtype=int)
+
+        total_count = 0 # Sanity check
+        for team in self.teams:
+            for game_id, game in team.games.iterrows():
+                opp_idx = IDS.index(game['OPP_ID'])
+                loc = 1 if 'vs.' in game['MATCHUP'] else 0
+                pred_prob = self.predict_win_probability(team, self.teams[opp_idx], loc)
+                pred_outcome = 'W' if pred_prob > 0.5 else 'L'
+                if pred_prob > 0.5:
+                    total_count += 1
+                    # Determine interval
+                    interval = np.where(pred_prob>pvals)[0][-1]
+                    counts[interval] += 1
+                    if pred_outcome == game['WL']:
+                        correct[interval] += 1
+
+        print("Total count:", total_count)
+        for i,p in enumerate(pvals):
+            print('Coverage for {}: {} / {} ({:.2})'.format(p, correct[i], counts[i], float(correct[i])/counts[i]))
                     
 class LeastSquares(RatingSystm):
     def __init__(self):
         super().__init__()
         self.fit_ratings()
 
-    def fit_ratings(self, SCORE_CAP=15, HOME_ADV=True):
+    def fit_ratings(self, SCORE_CAP=15, HOME_ADV=False):
         nteam = len(self.teams)
         neq = nteam+1 if HOME_ADV else nteam
         XX = np.zeros((neq, neq))
