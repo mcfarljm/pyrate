@@ -91,17 +91,23 @@ def least_squares(teams, SCORE_CAP=15, HOME_ADV=True):
                 # of the normalized scores.
                 team.games.loc[game_id,'NS'] -= game['LOC']*ratings[-1]
 
+    # Estimate residual standard deviation, which can be used in
+    # probability calculations
+    SS = sum([sum(t.games['NS']**2) for t in teams]) / 2.0 # Divide by two b/c each game counted twice
+    count = sum([len(t.games) for t in teams]) / 2
+    sigma = np.sqrt(SS/count)
+
     if HOME_ADV:
-        return ratings[:-1], ratings[-1]
+        return ratings[:-1], ratings[-1], sigma
     else:
-        return ratings, None
+        return ratings, None, sigma
         
 
 if __name__ == '__main__':
     teams = [Team(id) for id in IDS]
     fill_scores(teams)
-    ratings, home_adv = least_squares(teams)
-    ratings = pd.DataFrame({'rating':ratings}, index=[t.name for t in teams])
+    rating_vals, home_adv, sigma = least_squares(teams)
+    ratings = pd.DataFrame({'rating':rating_vals}, index=[t.name for t in teams])
     ratings = ratings.sort_values(by='rating', ascending=False)
     
 
