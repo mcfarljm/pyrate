@@ -106,6 +106,14 @@ class RatingSystm(League):
         print("Total count:", total_count)
         for i,p in enumerate(pvals):
             print('Coverage for {}: {} / {} ({:.2})'.format(p, correct[i], counts[i], float(correct[i])/counts[i]))
+
+    def scoreboard_predict(self, offset=0):
+        board = nba_py.Scoreboard(offset=offset).game_header()
+        for idx, game in board.iterrows():
+            home_team = self.teams[IDS.index(str(game['HOME_TEAM_ID']))]
+            vis_team = self.teams[IDS.index(str(game['VISITOR_TEAM_ID']))]
+            home_percent = self.predict_win_probability(home_team, vis_team, 1.0) * 100.0
+            print('({:.0f}%) {:15} @ ({:.0f}%) {:15}'.format(100.0-home_percent, vis_team.name, home_percent, home_team.name))
                     
 class LeastSquares(RatingSystm):
     def __init__(self):
