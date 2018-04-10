@@ -59,7 +59,7 @@ class Bayes(rb.RatingSystm):
             team.rating = team_node.rating
         self.ratings = np.array([t.rating for t in self.teams])
 
-    def run_MCMC(self, team_nodes, nsamp=200, nburn=100):
+    def run_MCMC(self, team_nodes, nsamp=500, nburn=100):
         # Allocate memory to store samples:
         for team_node in team_nodes:
             team_node.rating_samp = np.empty(nsamp)
@@ -87,16 +87,23 @@ class Bayes(rb.RatingSystm):
         for team_node in team_nodes:
             team_node.rating = np.mean(team_node.rating_samp)
 
+        # Store team_nodes reference
+        self.team_nodes = team_nodes
+
         # Print acceptance rate stats
         print('Average acceptance rate:', np.mean([t.acc_ratio for t in team_nodes]))
         print('Min acceptance rate:', min([t.acc_ratio for t in team_nodes]))
         print('Max acceptance rate:', max([t.acc_ratio for t in team_nodes]))
+
+    def predict_win_probability(self, team1, team2, loc=None):
+        idx1, idx2 = self.teams.index(team1), self.teams.index(team2)
+        return np.mean( [rating_func(rating1, rating2) for rating1, rating2 in zip(self.team_nodes[idx1].rating_samp, self.team_nodes[idx2].rating_samp)] )
         
         
 if __name__ == '__main__':
     import pandas as pd
 
     bayes = Bayes()
-    #bayes.evaluate_predicted_wins()
+    bayes.evaluate_predicted_wins()
     ratings = pd.DataFrame({'rating':bayes.ratings}, index=[t.name for t in bayes.teams])
     ratings = ratings.sort_values(by='rating', ascending=False)    
