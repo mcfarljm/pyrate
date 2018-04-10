@@ -17,10 +17,9 @@ class LeastSquares(rb.RatingSystm):
         neq = nteam+1 if HOME_ADV else nteam
         XX = np.zeros((neq, neq))
         ratings = np.zeros(neq)
-        for i, team_id in enumerate(rb.IDS):
-            for game_id, game in self.teams[i].games.iterrows():
-                opp_idx = rb.IDS.index(game['OPP_ID'])
-                XX[i,opp_idx] -= 1.0
+        for i, team in enumerate(self.teams):
+            for game_id, game in team.games.iterrows():
+                XX[i,game['OPP_IDX']] -= 1.0
                 points = game['PTS'] - game['OPP_PTS']
                 points = np.sign(points) * min(SCORE_CAP, abs(points)) # Truncates
                 # Store "Game Outcome Measure":
@@ -48,8 +47,7 @@ class LeastSquares(rb.RatingSystm):
         # much was "earned" for each game.
         for team in self.teams:
             for game_id, game in team.games.iterrows():
-                opp_idx = rb.IDS.index(game['OPP_ID'])
-                opp_rating = ratings[opp_idx]
+                opp_rating = ratings[game['OPP_IDX']]
                 team.games.loc[game_id,'NS'] = game['GOM'] + opp_rating
                 if HOME_ADV:
                     # Including home advantage in the normalized score is

@@ -45,13 +45,14 @@ class League:
                     except KeyError:
                         pass
                     else:
-                        team.games.loc[game_id,'OPP_ID'] = other_team.id
+                        team.games.loc[game_id,'OPP_IDX'] = IDS.index(other_team.id)
                         team.games.loc[game_id,'OPP_PTS'] = pts
 
                         if team.games.loc[game_id,'LOC'] == other_team.games.loc[game_id,'LOC']:
                             print('Location mismatch:', game_id)
                         break
             team.games['OPP_PTS'] = team.games['OPP_PTS'].astype(int)
+            team.games['OPP_IDX'] = team.games['OPP_IDX'].astype(int)
 
 class RatingSystm(League):
     def __init__(self):
@@ -65,9 +66,8 @@ class RatingSystm(League):
         for team in self.teams:
             for game_id, game in team.games.iterrows():
                 count += 1
-                opp_idx = IDS.index(game['OPP_ID'])
                 loc = 1 if game['LOC']=='H' else -1
-                pred = 'W' if self.predict_win_probability(team, self.teams[opp_idx], loc) > 0.5 else 'L'
+                pred = 'W' if self.predict_win_probability(team, self.teams[game['OPP_IDX']], loc) > 0.5 else 'L'
                 if pred == 'W':
                     pred_win_count += 1
                 if pred == game['WL']:
@@ -86,9 +86,8 @@ class RatingSystm(League):
         total_count = 0 # Sanity check
         for team in self.teams:
             for game_id, game in team.games.iterrows():
-                opp_idx = IDS.index(game['OPP_ID'])
                 loc = 1 if game['LOC']=='H' else -1
-                pred_prob = self.predict_win_probability(team, self.teams[opp_idx], loc)
+                pred_prob = self.predict_win_probability(team, self.teams[game['OPP_IDX']], loc)
                 pred_outcome = 'W' if pred_prob > 0.5 else 'L'
                 if pred_prob > 0.5:
                     total_count += 1
