@@ -1,4 +1,5 @@
 import numpy as np
+import functools
 
 import ratingbase as rb
 
@@ -17,6 +18,7 @@ class TeamNode:
     prop_std = 0.2
     def __init__(self, team):
         self.team = team
+        self.win_flags = self.team.games['WL'] == 'W'
         self.rating = 0.5 # Default initialization
         self.nacc = 0
 
@@ -27,11 +29,8 @@ class TeamNode:
         return np.random.normal(self.rating, self.prop_std)
 
     def eval_move(self, rating_z):
-        logp_z = 0.0
-        for i in range(len(self.opponents)):
-            p = rating_func(rating_z, self.opponents[i].rating)
-            logp_z += np.log(p) if self.team.games.iloc[i]['WL']=='W' else np.log(1.0-p)
-        return logp_z
+        pwin_vals = [rating_func(rating_z, o.rating) for o in self.opponents]
+        return sum([np.log(p) if win else np.log(1.0-p) for win,p in zip(self.win_flags, pwin_vals)])
 
     def update_logp(self):
         self.logp = self.eval_move(self.rating)
@@ -58,17 +57,17 @@ class Bayes(rb.RatingSystm):
         self.run_MCMC(team_nodes)
         for team,team_node in zip(self.teams, team_nodes):
             team.rating = team_node.rating
+        self.ratings = np.array([t.rating for t in self.teams])
 
-    def run_MCMC(self, team_nodes, nsamp=5000, nburn=500):
+    def run_MCMC(self, team_nodes, nsamp=200, nburn=100):
         # Allocate memory to store samples:
         for team_node in team_nodes:
             team_node.rating_samp = np.empty(nsamp)
             team_node.logp_samp = np.empty(nsamp)
 
         for isamp in range(nsamp+nburn):
-            print(isamp)
+            if isamp%100==0: print(isamp)
             for team_node in team_nodes:
-                print(team_node.team.name)
                 rating_z = team_node.propose_move()
                 logp_z = calc_log_prior(rating_z)
                 if np.isfinite(logp_z):
