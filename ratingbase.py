@@ -92,7 +92,7 @@ class RatingSystm(League):
         if pred_win_count != count:
             print('Mismatch for predicted win count:', pred_win_count)
 
-    def evaluate_coverage_probability(self):
+    def evaluate_coverage_probability(self, exclude_train=False):
         pvals = np.array([0.5, 0.6, 0.7, 0.8, 0.9])
         counts = np.zeros(len(pvals), dtype=int)
         correct = np.zeros(len(pvals), dtype=int)
@@ -100,6 +100,8 @@ class RatingSystm(League):
         total_count = 0 # Sanity check
         for team in self.teams:
             for game_id, game in team.games.iterrows():
+                if exclude_train and game['TRAIN']:
+                    continue                
                 loc = 1 if game['LOC']=='H' else -1
                 pred_prob = self.predict_win_probability(team, self.teams[game['OPP_IDX']], loc)
                 pred_outcome = 'W' if pred_prob > 0.5 else 'L'
