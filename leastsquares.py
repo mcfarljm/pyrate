@@ -8,8 +8,8 @@ def normcdf(x, mu=0, sigma=1):
     return (1.0 + np.erf(z / np.sqrt(2.0))) / 2.0
 
 class LeastSquares(rb.RatingSystm):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, max_date_train=None):
+        super().__init__(max_date_train)
         self.fit_ratings()
 
     def fit_ratings(self, SCORE_CAP=15, HOME_ADV=True):
@@ -19,6 +19,8 @@ class LeastSquares(rb.RatingSystm):
         ratings = np.zeros(neq)
         for i, team in enumerate(self.teams):
             for game_id, game in team.games.iterrows():
+                if not game['TRAIN']:
+                    continue
                 XX[i,game['OPP_IDX']] -= 1.0
                 points = game['PTS'] - game['OPP_PTS']
                 points = np.sign(points) * min(SCORE_CAP, abs(points)) # Truncates
@@ -35,7 +37,8 @@ class LeastSquares(rb.RatingSystm):
                     else: # Away game
                         XX[i,-1] -= 1.0
 
-            XX[i,i] = len(self.teams[i].games)
+            XX[i,i] = sum(self.teams[i].games['TRAIN'])
+            #print('team {} games: {}'.format(i, XX[i,i]))
 
         # Replace last team equation to force sum(ratings)=0:
         XX[nteam-1,:nteam] = 1.0
@@ -47,6 +50,8 @@ class LeastSquares(rb.RatingSystm):
         # much was "earned" for each game.
         for team in self.teams:
             for game_id, game in team.games.iterrows():
+                if not game['TRAIN']:
+                    continue
                 opp_rating = ratings[game['OPP_IDX']]
                 team.games.loc[game_id,'NS'] = game['GOM'] + opp_rating
                 if HOME_ADV:
@@ -58,8 +63,8 @@ class LeastSquares(rb.RatingSystm):
 
         # Estimate residual standard deviation, which can be used in
         # probability calculations
-        SS = sum([sum(t.games['NS']**2) for t in self.teams]) / 2.0 # Divide by two b/c each game counted twice
-        count = sum([len(t.games) for t in self.teams]) / 2
+        SS = sum([sum(t.games.loc[t.games['TRAIN'],'NS']**2) for t in self.teams]) / 2.0 # Divide by two b/c each game counted twice
+        count = sum([sum(t.games['TRAIN']) for t in self.teams]) / 2
         self.sigma = np.sqrt(SS/count)
 
         if HOME_ADV:
@@ -90,9 +95,10 @@ class LeastSquares(rb.RatingSystm):
 
 if __name__ == '__main__':
     import pandas as pd
+    import datetime
 
-    lsq = LeastSquares()
-    lsq.evaluate_predicted_wins()
+    lsq = LeastSquares(datetime.datetime(2018,1,1))
+    lsq.evaluate_predicted_wins(True)
     ratings = pd.DataFrame({'rating':lsq.ratings}, index=[t.name for t in lsq.teams])
     ratings = ratings.sort_values(by='rating', ascending=False)
     

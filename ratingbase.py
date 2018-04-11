@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import datetime
 import nba_py
 import nba_py.team
 import nba_py.game
@@ -25,11 +26,22 @@ class Team:
         self.games = df.loc[:,['Game_ID','GAME_DATE','MATCHUP','WL','PTS']]
         self.games = self.games.set_index('Game_ID')
         self.games['LOC'] = self.games.apply(lambda row: 'H' if 'vs.' in row['MATCHUP'] else 'A', axis=1)
+        # Default to use all games for model training
+        self.games['TRAIN'] = True
+
+    def set_train_flag_by_date(self, max_date):
+        """Set training flag by maximum date"""
+        self.games['TRAIN'] = self.games['GAME_DATE'].apply(lambda d: datetime.datetime.strptime(d, '%b %d, %Y') <= max_date)
 
 class League:
-    def __init__(self):
+    def __init__(self, max_date_train=None):
         self.teams = [Team(id) for id in IDS]
         self.fill_scores()
+        if max_date_train is not None:
+            for team in self.teams:
+                team.set_train_flag_by_date(max_date_train)
+            print('Training on {} games'.format(sum([sum(t.games['TRAIN']) for t in self.teams]) / 2))
+                
         
     def fill_scores(self):
         """Fill in opponent scores by matching up game id's
@@ -55,16 +67,18 @@ class League:
             team.games['OPP_IDX'] = team.games['OPP_IDX'].astype(int)
 
 class RatingSystm(League):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, max_date_train=None):
+        super().__init__(max_date_train)
 
-    def evaluate_predicted_wins(self):
+    def evaluate_predicted_wins(self, exclude_train=False):
         """Evaluate how many past games are predicted correctly"""
         count = 0
         correct = 0
         pred_win_count = 0
         for team in self.teams:
             for game_id, game in team.games.iterrows():
+                if exclude_train and game['TRAIN']:
+                    continue
                 count += 1
                 loc = 1 if game['LOC']=='H' else -1
                 pred = 'W' if self.predict_win_probability(team, self.teams[game['OPP_IDX']], loc) > 0.5 else 'L'

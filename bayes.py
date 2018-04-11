@@ -18,12 +18,13 @@ class TeamNode:
     prop_std = 0.2
     def __init__(self, team):
         self.team = team
-        self.win_flags = self.team.games['WL'] == 'W'
+        # Set up array of flags for wins, but only of TRAIN games
+        self.win_flags = self.team.games.loc[self.team.games['TRAIN'],'WL'] == 'W'
         self.rating = 0.5 # Default initialization
         self.nacc = 0
 
     def set_opponent_pointers(self, team_node_list):
-        self.opponents = self.team.games['OPP_IDX'].apply(team_node_list.__getitem__)
+        self.opponents = self.team.games.loc[self.team.games['TRAIN'],'OPP_IDX'].apply(team_node_list.__getitem__)
 
     def propose_move(self):
         return np.random.normal(self.rating, self.prop_std)
@@ -44,8 +45,8 @@ class TeamNode:
             team.update_logp()
 
 class Bayes(rb.RatingSystm):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, max_date_train=None):
+        super().__init__(max_date_train)
         self.fit_ratings()
 
     def fit_ratings(self):
@@ -102,8 +103,9 @@ class Bayes(rb.RatingSystm):
         
 if __name__ == '__main__':
     import pandas as pd
+    import datetime
 
-    bayes = Bayes()
-    bayes.evaluate_predicted_wins()
+    bayes = Bayes(datetime.datetime(2018,1,1))
+    bayes.evaluate_predicted_wins(True)
     ratings = pd.DataFrame({'rating':bayes.ratings}, index=[t.name for t in bayes.teams])
     ratings = ratings.sort_values(by='rating', ascending=False)    
