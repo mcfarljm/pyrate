@@ -5,11 +5,19 @@ import datetime
 import team as teammodule
 
 class League:
-    def __init__(self, teams, max_date_train=None):
+    def __init__(self, teams, team_names=None, max_date_train=None):
         """Create League instance
+
+        Parameters
+        ----------
+        team_names: dict-like
+            maps team id to name
         """
         self.teams = teams
         self.team_ids = [team.id for team in teams]
+        if team_names is not None:
+            for team in teams:
+                team.name = team_names[team.id]
         for team in self.teams:
             team.games['TRAIN'] = True
         # if max_date_train is not None:
@@ -18,7 +26,7 @@ class League:
         #     print('Training on {} games'.format(sum([sum(t.games['TRAIN']) for t in self.teams]) / 2))
 
     @classmethod
-    def from_hyper_table(cls, df, max_date_train=None):
+    def from_hyper_table(cls, df, team_names=None, max_date_train=None):
         """Set up league from hyper table format
 
         Parameters
@@ -32,10 +40,10 @@ class League:
         team_ids = df['TEAM_ID'].unique()
         teams = [teammodule.Team.from_hyper_table(df, id) for id in team_ids]
         teammodule.fill_hyper_scores(teams)
-        return cls(teams, max_date_train=max_date_train)
+        return cls(teams, team_names=team_names, max_date_train=max_date_train)
 
     @classmethod
-    def from_games_table(cls, df, max_date_train=None):
+    def from_games_table(cls, df, team_names=None, max_date_train=None):
         """Set up league from games table format
 
         Parameters
@@ -48,20 +56,8 @@ class League:
         """
         team_ids = np.unique(np.concatenate((df['TEAM_ID'], df['OPP_ID'])))
         teams = [teammodule.Team.from_games_table(df, id) for id in team_ids]
-        return cls(teams, max_date_train=max_date_train)    
+        return cls(teams, team_names=team_names, max_date_train=max_date_train)
 
-    @classmethod
-    def from_massey_hyper_csv(cls, filename):
-        df = pd.read_csv(filename, names=['days','date','GAME_ID','RESULT_ID','TEAM_ID','LOC','PTS'], header=None)
-        return League.from_hyper_table(df)
-
-    @classmethod
-    def from_massey_games_csv(cls, filename):
-        df = pd.read_csv(filename, names=['days','date','TEAM_ID','LOC', 'PTS','OPP_ID','OPP_LOC','OPP_PTS'], header=None)
-        # Ignore location for now, due to inconsistency in string vs int:
-        df.drop(['LOC','OPP_LOC'], axis=1, inplace=True)
-        return League.from_games_table(df)    
-        
 
 class RatingSystm:
     def __init__(self, league):
