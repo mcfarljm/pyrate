@@ -4,7 +4,7 @@ import pandas as pd
 import ratingbase
 import leastsquares
 
-class ToyLeague(unittest.TestCase):
+class ToyLeagueHyper(unittest.TestCase):
 
     def setUp(self):
         # Data from Massey (1997) Example 4.2.  Home/away values have
@@ -47,6 +47,40 @@ class ToyLeague(unittest.TestCase):
         correct, count = lsq.evaluate_predicted_wins()
         self.assertEqual(correct, 3)
         self.assertEqual(count, 5)
+
+class ToyLeagueGames(unittest.TestCase):
+
+    def setUp(self):
+        # Data from Massey (1997) Example 4.2.  Home/away values have
+        # been added.
+        self.raw_df = pd.DataFrame(
+            [[1, 10, 'H', 2, 6, 'A'],
+             [3, 4, 'H', 4, 4, 'A'],
+             [4, 9, 'H', 2, 2, 'A'],
+             [1, 8, 'A', 4, 6, 'H'],
+             [2, 3, 'H', 3, 2, 'A']],
+            columns=['TEAM_ID', 'PTS', 'LOC', 'OPP_ID', 'OPP_PTS', 'OPP_LOC'])
+
+        self.league = ratingbase.League.from_games_table(self.raw_df)
+        
+    def testLeastSquares(self):
+        expected_ratings = [2.375, -2.5, -1.125, 1.25]
+        lsq = leastsquares.LeastSquares(self.league)
+        for team, expected_rating in zip(lsq.teams, expected_ratings):
+            self.assertAlmostEqual(team.rating, expected_rating)
+
+    def testScoreCap(self):
+        expected_ratings = [0.875, -0.25, -0.625, 0.0]
+        lsq = leastsquares.LeastSquares(self.league, score_cap=1)
+        for team, expected_rating in zip(lsq.teams, expected_ratings):
+            self.assertAlmostEqual(team.rating, expected_rating)
+
+    def testHomeCourt(self):
+        expected_ratings = [1.875, -2.5, -1.625, 0.25]
+        lsq = leastsquares.LeastSquares(self.league, homecourt=True)
+        for team, expected_rating in zip(lsq.teams, expected_ratings):
+            self.assertAlmostEqual(team.rating, expected_rating)
+        self.assertAlmostEqual(lsq.home_adv, 2.0)        
 
 class ErrorTest(unittest.TestCase):
 

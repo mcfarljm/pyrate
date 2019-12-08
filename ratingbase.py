@@ -2,13 +2,14 @@ import pandas as pd
 import numpy as np
 import datetime
 
-import team
+import team as teammodule
 
 class League:
     def __init__(self, teams, max_date_train=None):
+        """Create League instance
+        """
         self.teams = teams
         self.team_ids = [team.id for team in teams]
-        self.fill_scores()
         for team in self.teams:
             team.games['TRAIN'] = True
         # if max_date_train is not None:
@@ -29,42 +30,37 @@ class League:
             for away, 0 for neutral).
         """
         team_ids = df['TEAM_ID'].unique()
-        teams = [team.Team.from_hyper_table(df, id) for id in team_ids]
-        return cls(teams, max_date_train)
-        
-    def fill_scores(self):
-        """Fill in opponent scores by matching up game id's"""
-        for team in self.teams:
-            for game_id in team.games.index:
-                for other_team in self.teams:
-                    if team is other_team:
-                        continue
-                    try:
-                        pts = other_team.games.loc[game_id,'PTS']
-                    except KeyError:
-                        pass
-                    else:
-                        team.games.loc[game_id,'OPP_IDX'] = self.team_ids.index(other_team.id)
-                        team.games.loc[game_id,'OPP_PTS'] = pts
+        teams = [teammodule.Team.from_hyper_table(df, id) for id in team_ids]
+        teammodule.fill_hyper_scores(teams)
+        return cls(teams, max_date_train=max_date_train)
 
-                        if 'LOC' in team.games:
-                            if team.games.loc[game_id,'LOC'] == other_team.games.loc[game_id,'LOC']:
-                                print('Location mismatch:', game_id)
-                        break
-            if any(team.games['OPP_IDX'].isnull()):
-                raise ValueError('incomplete opponent data for team {}'.format(team.id))
-            team.games.loc[:,'OPP_IDX'] = team.games['OPP_IDX'].astype(int)
-            team.games.loc[:,'OPP_PTS'] = team.games['OPP_PTS'].astype(int)
+    @classmethod
+    def from_games_table(cls, df, max_date_train=None):
+        """Set up league from games table format
 
-            # Set WL
-            def get_wl(row):
-                if row['PTS'] > row['OPP_PTS']:
-                    return 'W'
-                elif row['PTS'] < row['OPP_PTS']:
-                    return 'L'
-                else:
-                    return 'T'
-            team.games['WL'] = team.games.apply(get_wl, axis=1)
+        Parameters
+        ----------
+        df : pandas Data frame
+            A data frame with league data, containing at least the
+            following columns: 'TEAM_ID', 'PTS', 'OPP_ID', 'OPP_PTS'.
+            Optional columns are 'DATE', 'LOC', and 'OPP_LOC' (1 for
+            home, -1 for away, 0 for neutral).
+        """
+        team_ids = np.unique(np.concatenate((df['TEAM_ID'], df['OPP_ID'])))
+        teams = [teammodule.Team.from_games_table(df, id) for id in team_ids]
+        return cls(teams, max_date_train=max_date_train)    
+
+    @classmethod
+    def from_massey_hyper_csv(cls, filename):
+        df = pd.read_csv(filename, names=['days','date','GAME_ID','RESULT_ID','TEAM_ID','LOC','PTS'], header=None)
+        return League.from_hyper_table(df)
+
+    @classmethod
+    def from_massey_games_csv(cls, filename):
+        df = pd.read_csv(filename, names=['days','date','TEAM_ID','LOC', 'PTS','OPP_ID','OPP_LOC','OPP_PTS'], header=None)
+        # Ignore location for now, due to inconsistency in string vs int:
+        df.drop(['LOC','OPP_LOC'], axis=1, inplace=True)
+        return League.from_games_table(df)    
         
 
 class RatingSystm:
