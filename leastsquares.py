@@ -82,6 +82,8 @@ class LeastSquares(rb.RatingSystm):
         for rating,team in zip(self.ratings, self.teams):
             team.rating = rating
 
+        self.store_ratings()
+
     def predict_win_probability(self, team1, team2, loc=None):
         """Predict win probability for team1 over team2
 

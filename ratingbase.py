@@ -64,6 +64,18 @@ class RatingSystm:
         self.league = league
         self.teams = league.teams
 
+    def store_ratings(self):
+        "After child method is called, organize rating data into DataFrame"""
+        ratings = self.ratings
+        try:
+            index = [t.name for t in self.teams]
+        except AttributeError:
+            index = [t.id for t in self.teams]
+        self.ratings = pd.DataFrame({'rating': ratings}, index=index)
+
+    def display_ratings(self, n=10):
+        print(self.ratings.sort_values(by='rating', ascending=False).head(n))    
+
     def evaluate_predicted_wins(self, exclude_train=False):
         """Evaluate how many past games are predicted correctly"""
         count = 0
