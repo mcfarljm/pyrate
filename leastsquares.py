@@ -1,20 +1,24 @@
 import numpy as np
+import math
 
 import ratingbase as rb
 
 def normcdf(x, mu=0, sigma=1):
     """Use np.erf so don't need scipy"""
     z = (x-mu)/sigma
-    return (1.0 + np.erf(z / np.sqrt(2.0))) / 2.0
+    return (1.0 + math.erf(z / np.sqrt(2.0))) / 2.0
 
 class LeastSquares(rb.RatingSystm):
-    def __init__(self, max_date_train=None):
-        super().__init__(max_date_train)
+    def __init__(self, league, score_cap=None, homecourt=False):
+        super().__init__(league)
+        self.score_cap = score_cap
+        self.homecourt = homecourt
+
         self.fit_ratings()
 
-    def fit_ratings(self, SCORE_CAP=15, HOME_ADV=True):
+    def fit_ratings(self):
         nteam = len(self.teams)
-        neq = nteam+1 if HOME_ADV else nteam
+        neq = nteam+1 if self.homecourt else nteam
         XX = np.zeros((neq, neq))
         ratings = np.zeros(neq)
         for i, team in enumerate(self.teams):
@@ -23,12 +27,13 @@ class LeastSquares(rb.RatingSystm):
                     continue
                 XX[i,game['OPP_IDX']] -= 1.0
                 points = game['PTS'] - game['OPP_PTS']
-                points = np.sign(points) * min(SCORE_CAP, abs(points)) # Truncates
+                if self.score_cap is not None:
+                    points = np.sign(points) * min(self.score_cap, abs(points)) # Truncates
                 # Store "Game Outcome Measure":
                 self.teams[i].games.loc[game_id,'GOM'] = points
                 ratings[i] += points
 
-                if HOME_ADV:
+                if self.homecourt:
                     if game['LOC'] == 'H': # Home game
                         XX[i,-1] += 1.0
                         # Home totals:
@@ -54,7 +59,7 @@ class LeastSquares(rb.RatingSystm):
                     continue
                 opp_rating = ratings[game['OPP_IDX']]
                 team.games.loc[game_id,'NS'] = game['GOM'] + opp_rating
-                if HOME_ADV:
+                if self.homecourt:
                     # Including home advantage in the normalized score is
                     # consistent with the rating being equal to the mean
                     # of the normalized scores.
@@ -67,7 +72,7 @@ class LeastSquares(rb.RatingSystm):
         count = sum([sum(t.games['TRAIN']) for t in self.teams]) / 2
         self.sigma = np.sqrt(SS/count)
 
-        if HOME_ADV:
+        if self.homecourt:
             self.ratings = ratings[:-1]
             self.home_adv = ratings[-1]
         else:
