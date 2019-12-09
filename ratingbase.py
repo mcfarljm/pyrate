@@ -18,6 +18,7 @@ class League:
         if team_names is not None:
             for team in teams:
                 team.name = team_names[team.id]
+            self.team_dict = {t.name: t for t in teams}
         for team in self.teams:
             team.games['TRAIN'] = True
         # if max_date_train is not None:
@@ -63,6 +64,10 @@ class RatingSystm:
     def __init__(self, league):
         self.league = league
         self.teams = league.teams
+        try:
+            self.team_dict = league.team_dict
+        except AttributeError:
+            pass
 
     def store_ratings(self):
         "After child method is called, organize rating data into DataFrame"""

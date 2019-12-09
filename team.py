@@ -1,5 +1,9 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+from pandas.plotting import register_matplotlib_converters
+
+register_matplotlib_converters()
 
 class Team:
     def __init__(self, id, games):
@@ -74,7 +78,23 @@ class Team:
 
         team_ids = list(np.unique(np.concatenate((df['TEAM_ID'], df['OPP_ID']))))
         games['OPP_IDX'] = games['OPP_ID'].apply(lambda x: team_ids.index(x))
-        return cls(team_id, games)    
+        return cls(team_id, games)
+
+    def plot(self, by='NS'):
+        f, ax = plt.subplots()
+        ax.plot(self.games['date'], self.games[by], 'o')
+
+        xl = ax.get_xlim()
+        yl = ax.get_ylim()
+        ym = max(abs(np.array(yl)))
+        ax.plot(xl, [0,0], 'k--', lw=1)
+        ax.set_xlim(xl)
+        ax.set_ylim(-ym,ym)
+
+        ax.set_title(self.name.replace('_',' '))
+        ax.set_xlabel('Date')
+        ax.set_ylabel(by)
+        
 
 def fill_hyper_scores(teams):
     """Fill in opponent scores for "hyper" format data
