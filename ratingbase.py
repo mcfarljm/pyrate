@@ -67,11 +67,23 @@ class RatingSystm:
     def store_ratings(self):
         "After child method is called, organize rating data into DataFrame"""
         ratings = self.ratings
+        self.get_strength_of_schedule()
+        sos = [t.sos for t in self.teams]
+
         try:
             index = [t.name for t in self.teams]
         except AttributeError:
             index = [t.id for t in self.teams]
-        self.ratings = pd.DataFrame({'rating': ratings}, index=index)
+        self.ratings = pd.DataFrame({'rating': ratings,
+                                     'SoS': sos},
+                                    index=index)
+
+    def get_strength_of_schedule(self):
+        """Compute strength of schedule as average of opponent rating
+
+        For now, does not account for home court"""
+        for team in self.teams:
+            team.sos = np.mean([self.teams[idx].rating for idx in team.games['OPP_IDX']])
 
     def display_ratings(self, n=10):
         print(self.ratings.sort_values(by='rating', ascending=False).head(n))    
