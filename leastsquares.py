@@ -3,6 +3,8 @@ import math
 
 import ratingbase as rb
 
+loc_map = {'H': 1, 'A': -1, 'N': 0}
+
 def normcdf(x, mu=0, sigma=1):
     """Use np.erf so don't need scipy"""
     z = (x-mu)/sigma
@@ -33,13 +35,14 @@ class LeastSquares(rb.RatingSystm):
                 self.teams[i].games.loc[game_id,'GOM'] = points
                 ratings[i] += points
 
+                # Note: this assumes symmetry between home/away
                 if self.homecourt:
                     if game['LOC'] == 'H': # Home game
                         XX[i,-1] += 1.0
                         # Home totals:
                         XX[-1,-1] += 1.0
                         ratings[-1] += points
-                    else: # Away game
+                    elif game['LOC'] == 'A': # Away game
                         XX[i,-1] -= 1.0
 
             XX[i,i] = sum(self.teams[i].games['TRAIN'])
@@ -63,7 +66,7 @@ class LeastSquares(rb.RatingSystm):
                     # Including home advantage in the normalized score is
                     # consistent with the rating being equal to the mean
                     # of the normalized scores.
-                    loc = 1 if game['LOC']=='H' else -1
+                    loc = loc_map[game['LOC']] # numerical value
                     team.games.loc[game_id,'NS'] -= loc*ratings[-1]
 
         # Estimate residual standard deviation, which can be used in
