@@ -9,7 +9,7 @@ class Team:
     def __init__(self, id, games):
         self.id = id
         self.games = games
-        #print('setup team:', id, games)
+        _fill_win_loss(games)
 
     @classmethod
     def from_hyper_table(cls, df, team_id):
@@ -36,6 +36,15 @@ class Team:
         
         games = df[df['TEAM_ID'] == team_id].copy()
         games.set_index('GAME_ID', inplace=True)
+
+        opp_games = df[ (df['GAME_ID'].isin(games.index)) & (df['TEAM_ID'] != team_id) ].copy()
+        opp_games.rename(columns={'TEAM_ID':'OPP_ID', 'PTS':'OPP_PTS', 'LOC':'OPP_LOC'}, inplace=True )
+        opp_games.set_index('GAME_ID', inplace=True)
+
+        games = games.join(opp_games)
+
+        team_ids = list(df['TEAM_ID'].unique())
+        games['OPP_IDX'] = games['OPP_ID'].apply(lambda x: team_ids.index(x))
         return cls(team_id, games)
 
     @classmethod
@@ -96,40 +105,6 @@ class Team:
         ax.set_xlabel('Date')
         ax.set_ylabel(by)
         
-
-def fill_hyper_scores(teams):
-    """Fill in opponent scores for "hyper" format data
-
-    In this data format, every game is loaded directly, but the
-    opponent id and score are missing and must be filled in
-
-    """
-    team_ids = [team.id for team in teams]
-    
-    for team in teams:
-        for game_id in team.games.index:
-            for other_team in teams:
-                if team is other_team:
-                    continue
-                try:
-                    pts = other_team.games.loc[game_id,'PTS']
-                except KeyError:
-                    pass
-                else:
-                    team.games.loc[game_id,'OPP_IDX'] = team_ids.index(other_team.id)
-                    team.games.loc[game_id,'OPP_PTS'] = pts
-
-                    if 'LOC' in team.games:
-                        if team.games.loc[game_id,'LOC'] == other_team.games.loc[game_id,'LOC']:
-                            print('Location mismatch:', game_id)
-                    break
-        if any(team.games['OPP_IDX'].isnull()):
-            raise ValueError('incomplete opponent data for team {}'.format(team.id))
-        team.games.loc[:,'OPP_IDX'] = team.games['OPP_IDX'].astype(int)
-        team.games.loc[:,'OPP_PTS'] = team.games['OPP_PTS'].astype(int)
-
-        _fill_win_loss(team.games)
-
 
 def _fill_win_loss(games):
     def get_wl(row):

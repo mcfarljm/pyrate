@@ -40,7 +40,6 @@ class League:
         """
         team_ids = df['TEAM_ID'].unique()
         teams = [teammodule.Team.from_hyper_table(df, id) for id in team_ids]
-        teammodule.fill_hyper_scores(teams)
         return cls(teams, team_names=team_names, max_date_train=max_date_train)
 
     @classmethod
