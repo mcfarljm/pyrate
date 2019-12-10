@@ -50,6 +50,12 @@ class Team:
 
         team_ids = list(df['TEAM_ID'].unique())
         games['OPP_IDX'] = games['OPP_ID'].apply(lambda x: team_ids.index(x))
+
+        # For compatibility with Massey data, treat 0 points as
+        # scheduled game (could be added as a flag)
+        scheduled = (games['PTS'] == 0) & (games['OPP_PTS'] == 0)
+        games.loc[scheduled,'PTS'] = np.nan # Flag scheduled games        
+        
         return cls(team_id, games)
 
     @classmethod
