@@ -10,7 +10,7 @@ class Team:
         self.id = id
 
         # Split up into games and schedule
-        unplayed = games['PTS'].isnull()
+        unplayed = (games['PTS'].isnull() | games['OPP_PTS'].isnull())
         
         self.games = games[~unplayed].copy()
         self.scheduled = games[unplayed].copy()
@@ -54,7 +54,7 @@ class Team:
         # For compatibility with Massey data, treat 0 points as
         # scheduled game (could be added as a flag)
         scheduled = (games['PTS'] == 0) & (games['OPP_PTS'] == 0)
-        games.loc[scheduled,'PTS'] = np.nan # Flag scheduled games        
+        games.loc[scheduled,['PTS','OPP_PTS']] = np.nan # Flag scheduled games
         
         return cls(team_id, games)
 

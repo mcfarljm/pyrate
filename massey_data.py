@@ -21,6 +21,6 @@ def from_massey_games_csv(filename, teams_file):
     df.drop(columns='days', inplace=True)
     names = pd.read_csv(teams_file, index_col=0, squeeze=True, header=None, skipinitialspace=True)
     scheduled = (df['PTS'] == 0) & (df['OPP_PTS'] == 0)
-    df.loc[scheduled,'PTS'] = np.nan # Flag scheduled games
+    df.loc[scheduled,['PTS','OPP_PTS']] = np.nan # Flag scheduled games
     return ratingbase.League.from_games_table(df, team_names=names)
         
