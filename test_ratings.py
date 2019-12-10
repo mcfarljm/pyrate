@@ -86,7 +86,19 @@ class ToyLeagueGames(unittest.TestCase):
         lsq = leastsquares.LeastSquares(self.league, homecourt=True)
         for team, expected_rating in zip(lsq.teams, expected_ratings):
             self.assertAlmostEqual(team.rating, expected_rating)
-        self.assertAlmostEqual(lsq.home_adv, 2.0)        
+        self.assertAlmostEqual(lsq.home_adv, 2.0)
+
+    def testStrengtOfSchedule(self):
+        expected_sos_vals = [-0.625, 0.83333333, -0.625, -0.416666666]
+        lsq = leastsquares.LeastSquares(self.league)
+        for team, expected_sos in zip(lsq.teams, expected_sos_vals):
+            self.assertAlmostEqual(team.sos, expected_sos)
+
+    def testEvaluatePredWins(self):
+        lsq = leastsquares.LeastSquares(self.league)
+        correct, count = lsq.evaluate_predicted_wins()
+        self.assertEqual(correct, 3)
+        self.assertEqual(count, 5)        
 
 class ErrorTest(unittest.TestCase):
 

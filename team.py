@@ -78,6 +78,7 @@ class Team:
 
         team_ids = list(np.unique(np.concatenate((df['TEAM_ID'], df['OPP_ID']))))
         games['OPP_IDX'] = games['OPP_ID'].apply(lambda x: team_ids.index(x))
+        _fill_win_loss(games)
         return cls(team_id, games)
 
     def plot(self, by='NS'):
@@ -127,12 +128,17 @@ def fill_hyper_scores(teams):
         team.games.loc[:,'OPP_IDX'] = team.games['OPP_IDX'].astype(int)
         team.games.loc[:,'OPP_PTS'] = team.games['OPP_PTS'].astype(int)
 
-        # Set WL
-        def get_wl(row):
-            if row['PTS'] > row['OPP_PTS']:
-                return 'W'
-            elif row['PTS'] < row['OPP_PTS']:
-                return 'L'
-            else:
-                return 'T'
-        team.games['WL'] = team.games.apply(get_wl, axis=1)
+        _fill_win_loss(team.games)
+
+
+def _fill_win_loss(games):
+    def get_wl(row):
+        if row['PTS'] > row['OPP_PTS']:
+            return 'W'
+        elif row['PTS'] < row['OPP_PTS']:
+            return 'L'
+        else:
+            return 'T'
+    games['WL'] = games.apply(get_wl, axis=1)    
+
+        
