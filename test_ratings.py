@@ -1,5 +1,6 @@
 import unittest
 import pandas as pd
+import numpy as np
 
 import ratingbase
 import leastsquares
@@ -98,7 +99,35 @@ class ToyLeagueGames(unittest.TestCase):
         lsq = leastsquares.LeastSquares(self.league)
         correct, count = lsq.evaluate_predicted_wins()
         self.assertEqual(correct, 3)
-        self.assertEqual(count, 5)        
+        self.assertEqual(count, 5)
+
+        
+class ToyLeagueScheduled(unittest.TestCase):
+
+    def setUp(self):
+        self.raw_df = pd.DataFrame(
+            [[1, 10, 'H', 2, 6, 'A'],
+             [3, 4, 'H', 4, 4, 'A'],
+             [4, 9, 'H', 2, 2, 'A'],
+             [1, 8, 'A', 4, 6, 'H'],
+             [2, 3, 'H', 3, 2, 'A'],
+             [1, np.nan, 'H', 2, np.nan, 'A'],
+             [3, np.nan, 'H', 4, np.nan, 'A'],
+             [2, np.nan, 'H', 4, np.nan, 'A']],
+            columns=['TEAM_ID', 'PTS', 'LOC', 'OPP_ID', 'OPP_PTS', 'OPP_LOC'])
+
+        self.league = ratingbase.League.from_games_table(self.raw_df)
+
+    def testLeastSquares(self):
+        expected_ratings = [2.375, -2.5, -1.125, 1.25]
+        lsq = leastsquares.LeastSquares(self.league)
+        for team, expected_rating in zip(lsq.teams, expected_ratings):
+            self.assertAlmostEqual(team.rating, expected_rating)
+
+    def testSchedule(self):
+        expected_scheduled_counts = [1, 2, 1, 2]
+        for team, expected_scheduled_count in zip(self.league.teams, expected_scheduled_counts):
+            self.assertEqual(len(team.scheduled), expected_scheduled_count)
 
 class ErrorTest(unittest.TestCase):
 

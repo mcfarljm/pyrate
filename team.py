@@ -8,8 +8,13 @@ register_matplotlib_converters()
 class Team:
     def __init__(self, id, games):
         self.id = id
-        self.games = games
-        _fill_win_loss(games)
+
+        # Split up into games and schedule
+        unplayed = games['PTS'].isnull()
+        
+        self.games = games[~unplayed].copy()
+        self.scheduled = games[unplayed].copy()
+        _fill_win_loss(self.games)
 
     @classmethod
     def from_hyper_table(cls, df, team_id):
@@ -22,10 +27,10 @@ class Team:
         ----------
         df : pandas Data frame
             A data frame with league data, containing at least the
-            following columns: 'GAME_ID', 'TEAM_ID', 'PTS'.
-            Optional columns are 'DATE', 'LOC' (1 for home, -1
-            for away, 0 for neutral).
-
+            following columns: 'GAME_ID', 'TEAM_ID', 'PTS'.  Optional
+            columns are 'DATE', 'LOC' (1 for home, -1 for away, 0 for
+            neutral).  Scheduled (unplayed) games can be represented
+            by using np.nan for PTS.
         """
         if 'TEAM_ID' not in df:
             raise ValueError("expected 'TEAM_ID' column")
@@ -52,7 +57,7 @@ class Team:
         """Set up complete team definition from games table
 
         In the games table, each game is represented by one row that
-        identifies both teams and their scores
+        identifies both teams and their scores.
 
         Parameters
         ----------
@@ -60,8 +65,8 @@ class Team:
             A data frame with league data, containing at least the
             following columns: 'TEAM_ID', 'PTS', 'OPP_ID', 'OPP_PTS'.
             Optional columns are 'DATE', 'LOC', and 'OPP_LOC' (1 for
-            home, -1 for away, 0 for neutral).
-
+            home, -1 for away, 0 for neutral). Scheduled (unplayed)
+            games can be represented by using np.nan for PTS.
         """
         if 'TEAM_ID' not in df:
             raise ValueError("expected 'TEAM_ID' column")
