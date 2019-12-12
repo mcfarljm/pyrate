@@ -68,6 +68,12 @@ class RatingSystm:
         except AttributeError:
             pass
 
+    def summarize(self):
+        print('{} played games'.format(sum([len(t.games) for t in self.teams])//2))
+        num_sched = sum([len(t.scheduled) for t in self.teams])//2
+        if num_sched > 0:
+            print('{} scheduled games'.format(num_sched))
+
     def store_ratings(self):
         "After child method is called, organize rating data into DataFrame"""
         ratings = self.ratings
