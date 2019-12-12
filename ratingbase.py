@@ -59,7 +59,7 @@ class League:
         return cls(teams, team_names=team_names, max_date_train=max_date_train)
 
 
-class RatingSystm:
+class RatingSystem:
     def __init__(self, league):
         self.league = league
         self.teams = league.teams
