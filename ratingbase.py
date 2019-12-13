@@ -78,6 +78,11 @@ class RatingSystem:
     def store_ratings(self):
         "After child method is called, organize rating data into DataFrame"""
         ratings = self.ratings
+
+        # Store rating attribute for each team
+        for rating,team in zip(self.ratings, self.teams):
+            team.rating = rating
+        
         self.get_strength_of_schedule()
         sos = [t.sos for t in self.teams]
 
