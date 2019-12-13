@@ -14,7 +14,12 @@ class Team:
         
         self.games = games[~unplayed].copy()
         self.scheduled = games[unplayed].copy()
+        del games # Prevent accidental access to old version
+        self.games = self.games.astype({'PTS':'int32', 'OPP_PTS':'int32'})
+        self.games['Score'] = self.games['PTS'].astype(str).str.cat(self.games['OPP_PTS'].astype(str),sep='-')
         _fill_win_loss(self.games)
+        if 'Date' in self.games:
+            self.games.sort_values(by='Date', inplace=True)
 
     @classmethod
     def from_hyper_table(cls, df, team_id):
@@ -103,7 +108,7 @@ class Team:
 
     def plot(self, by='NS'):
         f, ax = plt.subplots()
-        ax.plot(self.games['date'], self.games[by], 'o')
+        ax.plot(self.games['Date'], self.games[by], 'o')
 
         xl = ax.get_xlim()
         yl = ax.get_ylim()

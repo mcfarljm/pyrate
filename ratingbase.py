@@ -18,6 +18,7 @@ class League:
         if team_names is not None:
             for team in teams:
                 team.name = team_names[team.id]
+                team.games['Opponent'] = team.games['OPP_ID'].map(team_names)
             self.team_dict = {t.name: t for t in teams}
         for team in self.teams:
             team.games['TRAIN'] = True
