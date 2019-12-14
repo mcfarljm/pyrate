@@ -21,6 +21,9 @@ class Team:
         if 'Date' in self.games:
             self.games.sort_values(by='Date', inplace=True)
 
+        self.wins = sum(self.games['PTS'] > self.games['OPP_PTS'])
+        self.losses = len(self.games) - self.wins
+
     @classmethod
     def from_hyper_table(cls, df, team_id):
         """Set up an incomplete team definition from a hypertable
