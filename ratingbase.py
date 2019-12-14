@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import datetime
+import sqlalchemy.types as sqlt
 
 import team as teammodule
 
@@ -150,3 +151,52 @@ class RatingSystem:
         print("Total count:", total_count)
         for i,p in enumerate(pvals):
             print('Coverage for {}: {} / {} ({:.2})'.format(p, correct[i], counts[i], float(correct[i])/counts[i]))
+
+    def to_db(self, engine):
+        """Write to database
+
+        Create "teams" and "games" tables.  The "games" table also
+        includes scheduled games.  Each game in the games table is
+        represented twice, once for each team in the TEAM_ID
+        position
+
+        """
+        
+        # ratings table
+        team_names = [t.name for t in self.teams]
+        df = self.ratings.copy()
+        df['TEAM_ID'] = self.league.team_ids
+        df['WINS'] = [t.wins for t in self.teams]
+        df['LOSSES'] = [t.losses for t in self.teams]
+        df['NAME'] = df.index
+
+        df.set_index('TEAM_ID', inplace=True)
+
+        df.to_sql("teams", engine, if_exists='replace', index=True,
+                  dtype = {'TEAM_ID': sqlt.Integer,
+                           'NAME': sqlt.Text,
+                           'rating': sqlt.Float,
+                           'SoS': sqlt.Float,
+                           'WINS': sqlt.Integer,
+                           'LOSSES': sqlt.Integer})
+
+        # games table
+        df = pd.concat([t.games for t in self.teams])
+        df = df.loc[:,['TEAM_ID','OPP_ID','PTS','OPP_PTS','LOC','Date','NS']]
+
+        df.to_sql("games", engine, if_exists='replace', index=False,
+                  dtype = {'TEAM_ID': sqlt.Integer,
+                           'OPP_ID': sqlt.Integer,
+                           'PTS': sqlt.Integer,
+                           'OPP_PTS': sqlt.Integer,
+                           'Date': sqlt.Date,
+                           'NS': sqlt.Float})
+
+        # scheduled games
+        df = pd.concat([t.scheduled for t in self.teams])
+        df = df.loc[:,['TEAM_ID','OPP_ID','LOC','Date']]
+
+        df.to_sql("games", engine, if_exists='append', index=False,
+                  dtype = {'TEAM_ID': sqlt.Integer,
+                           'OPP_ID': sqlt.Integer,
+                           'Date': sqlt.Date})
