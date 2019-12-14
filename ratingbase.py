@@ -5,6 +5,15 @@ import sqlalchemy.types as sqlt
 
 import team as teammodule
 
+def rank_array(a, descending=True):
+    """Rank array counting from 1"""
+    temp = np.argsort(a)
+    if descending:
+        temp = temp[::-1]
+    ranks = np.empty_like(temp)
+    ranks[temp] = np.arange(1,len(a)+1)
+    return ranks
+
 class League:
     def __init__(self, teams, team_names=None, max_date_train=None):
         """Create League instance
@@ -92,6 +101,7 @@ class RatingSystem:
         except AttributeError:
             index = [t.id for t in self.teams]
         self.ratings = pd.DataFrame({'rating': ratings,
+                                     'rank': rank_array(ratings),
                                      'SoS': sos},
                                     index=index)
 
@@ -176,6 +186,7 @@ class RatingSystem:
                   dtype = {'TEAM_ID': sqlt.Integer,
                            'NAME': sqlt.Text,
                            'rating': sqlt.Float,
+                           'rank': sqlt.Integer,
                            'SoS': sqlt.Float,
                            'WINS': sqlt.Integer,
                            'LOSSES': sqlt.Integer})
