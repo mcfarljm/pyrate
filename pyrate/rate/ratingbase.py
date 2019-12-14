@@ -3,7 +3,7 @@ import numpy as np
 import datetime
 import sqlalchemy.types as sqlt
 
-import team as teammodule
+from .team import Team
 
 def rank_array(a, descending=True):
     """Rank array counting from 1"""
@@ -50,7 +50,7 @@ class League:
             for away, 0 for neutral).
         """
         team_ids = df['TEAM_ID'].unique()
-        teams = [teammodule.Team.from_hyper_table(df, id) for id in team_ids]
+        teams = [Team.from_hyper_table(df, id) for id in team_ids]
         return cls(teams, team_names=team_names, max_date_train=max_date_train)
 
     @classmethod
@@ -66,7 +66,7 @@ class League:
             home, -1 for away, 0 for neutral).
         """
         team_ids = np.unique(np.concatenate((df['TEAM_ID'], df['OPP_ID'])))
-        teams = [teammodule.Team.from_games_table(df, id) for id in team_ids]
+        teams = [Team.from_games_table(df, id) for id in team_ids]
         return cls(teams, team_names=team_names, max_date_train=max_date_train)
 
 

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-import ratingbase
+from . import ratingbase
 
 loc_map = {1: 'H', -1: 'A', 0: 'N'}
 

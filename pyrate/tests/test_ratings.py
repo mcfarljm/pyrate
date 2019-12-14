@@ -2,8 +2,8 @@ import unittest
 import pandas as pd
 import numpy as np
 
-import ratingbase
-import leastsquares
+from pyrate.rate import ratingbase
+from pyrate.rate import leastsquares
 
 class ToyLeagueHyper(unittest.TestCase):
 

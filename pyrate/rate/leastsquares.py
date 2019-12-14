@@ -1,7 +1,7 @@
 import numpy as np
 import math
 
-import ratingbase as rb
+from .ratingbase import RatingSystem
 
 loc_map = {'H': 1, 'A': -1, 'N': 0}
 
@@ -10,7 +10,7 @@ def normcdf(x, mu=0, sigma=1):
     z = (x-mu)/sigma
     return (1.0 + math.erf(z / np.sqrt(2.0))) / 2.0
 
-class LeastSquares(rb.RatingSystem):
+class LeastSquares(RatingSystem):
     def __init__(self, league, score_cap=None, homecourt=False):
         super().__init__(league)
         self.score_cap = score_cap
