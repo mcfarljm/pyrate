@@ -40,9 +40,10 @@ def add_link(m, league):
 
 def get_teams_table(league):
     db = get_db()
-    # Todo: subset out league
-    df = pd.read_sql_table('teams', db)
-    df = df[['NAME', 'rank', 'rating', 'WINS', 'LOSSES', 'SoS']]
+
+    query = """SELECT t.NAME, t.rank, t.rating, t.WINS, t.LOSSES, t.SoS FROM teams t
+    WHERE t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?);"""
+    df = pd.read_sql_query(query, db, params=[league])
     df.rename(columns={'NAME':'Team', 'rank': 'Rank', 'rating': 'Rating', 'WINS':'W', 'LOSSES':'L'}, inplace=True)
 
     func = lambda m: add_link(m, league)
@@ -54,11 +55,17 @@ def get_teams_table(league):
 def get_games_table(league, team_name):
     db = get_db()
 
-    # Todo: store team->id mapping so don't have to look up each time
-    teams = pd.read_sql_table('teams', db, index_col='NAME')
-    team_id = int(teams.loc[team_name,'TEAM_ID'])
+    # Todo: avoid having to look up team_id each time?
+    conn = db.connect()
+    output = db.execute('SELECT t.TEAM_ID FROM teams t WHERE t.NAME = ? AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?);', (team_name, league))
+    team_id = output.fetchone()[0]
+
+    query = """SELECT g.Date, g.LOC, t.name, g.PTS, g.OPP_PTS, g.NS FROM games g INNER JOIN teams t 
+    WHERE g.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
+    AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
+    AND g.TEAM_ID is ? AND g.PTS IS NOT NULL AND g.OPP_ID = t.TEAM_ID;"""
     
-    df = pd.read_sql_query('SELECT games.Date, games.LOC, teams.name, games.PTS, games.OPP_PTS, games.NS FROM games INNER JOIN teams WHERE games.TEAM_ID is ? AND games.PTS IS NOT NULL AND games.OPP_ID = teams.TEAM_ID', db, params=[team_id], parse_dates=['Date'])
+    df = pd.read_sql_query(query, db, params=[league, league, team_id], parse_dates=['Date'])
 
     fill_win_loss(df)
     
