@@ -1,0 +1,25 @@
+body { 
+  font-family: arial, sans-serif;
+}
+
+table, th, td {
+  border: none;
+  border-bottom: 1px solid #C8C8C8;
+  border-collapse: collapse;
+  text-align:left;
+  padding: 5px;
+  /* margin-bottom: 40px; */
+  /* font-size: 0.9em; */
+}
+
+td {
+    font-size: 0.85em;
+}
+
+tr:nth-child(even) { background-color:#eee; }
+/* tr:nth-child(odd) { background-color:#fff; } */
+
+tr:hover { background-color: #ffff99;}
+
+
+
