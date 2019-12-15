@@ -40,7 +40,7 @@ def create_app(test_config=None):
         def color_outcome(s):
             return ['color: green' if v=='W' else 'color: red' for v in s]
         
-        return render_template('base.html', table=df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').render(escape=False))
+        return render_template('base.html', table=df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero').render(escape=False))
 
 
     db.init_app(app)
