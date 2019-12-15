@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import sqlalchemy
 
-from flask import current_app, g
+from flask import current_app, g, url_for
 from flask.cli import with_appcontext
 
 
@@ -29,6 +29,14 @@ def get_teams_table():
     df = pd.read_sql_table('teams', db)
     df = df[['NAME', 'rank', 'rating', 'WINS', 'LOSSES', 'SoS']]
     df.rename(columns={'NAME':'Team', 'rank': 'Rank', 'rating': 'Rating', 'WINS':'W', 'LOSSES':'L'}, inplace=True)
+
+    # Splice in link:
+    def repl(m):
+        t = m.group(0)
+        url = url_for('team_page', team=t)
+        return '<a href="{url}">{team}</a>'.format(url=url, team=t)
+    df['Team'] = df['Team'].str.replace('(.+)',repl)
+    
     df.sort_values(by='Rating', ascending=False, inplace=True)
     return df
 
