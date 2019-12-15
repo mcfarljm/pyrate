@@ -1,9 +1,12 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from pandas.plotting import register_matplotlib_converters
-
-register_matplotlib_converters()
+try:
+    import matplotlib.pyplot as plt
+    from pandas.plotting import register_matplotlib_converters
+except ImportError:
+    pass
+else:
+    register_matplotlib_converters()
 
 class Team:
     def __init__(self, id, games):

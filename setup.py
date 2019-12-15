@@ -5,4 +5,9 @@ setup(name='pyrate',
       description='Sports rating system',
       author='John McFarland',
       author_email='mcfarljm@gmail.com',
-      packages=find_packages())
+      packages=find_packages(),
+      install_requires=[
+          'numpy',
+          'pandas',
+          'sqlalchemy'
+      ])
