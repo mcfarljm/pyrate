@@ -26,18 +26,19 @@ def test_db():
     df = pd.read_sql_table('teams', db)
     print(df.head())
 
+def add_link(m):
+    """Replace team name with link"""
+    t = m.group(0)
+    url = url_for('team_page', team=t)
+    return '<a href="{url}">{team}</a>'.format(url=url, team=t)
+
 def get_teams_table():
     db = get_db()
     df = pd.read_sql_table('teams', db)
     df = df[['NAME', 'rank', 'rating', 'WINS', 'LOSSES', 'SoS']]
     df.rename(columns={'NAME':'Team', 'rank': 'Rank', 'rating': 'Rating', 'WINS':'W', 'LOSSES':'L'}, inplace=True)
 
-    # Splice in link:
-    def repl(m):
-        t = m.group(0)
-        url = url_for('team_page', team=t)
-        return '<a href="{url}">{team}</a>'.format(url=url, team=t)
-    df['Team'] = df['Team'].str.replace('(.+)',repl)
+    df['Team'] = df['Team'].str.replace('(.+)',add_link)
     
     df.sort_values(by='Rating', ascending=False, inplace=True)
     return df
@@ -58,4 +59,7 @@ def get_games_table(team_name):
                        'PTS':'PF',
                        'WL':'Result',
                        'OPP_PTS':'PA'}, inplace=True)
+
+    df['Opponent'] = df['Opponent'].str.replace('(.+)',add_link)
+    
     return df
