@@ -22,17 +22,23 @@ def create_app(test_config=None):
         # load the test config if passed in
         app.config.from_mapping(test_config)
 
-
     @app.route('/')
-    def main():
-        df = db.get_teams_table()
+    def leagues():
+        leagues = db.get_leagues()
+        print('leagues:', leagues)
+        return render_template('leagues.html', leagues=leagues)
+
+    @app.route('/<league>')
+    def rankings(league):
+        print('rankings page:', league)
+        df = db.get_teams_table(league)
         fmts = {'Rating': '{:.2f}',
                 'SoS': '{:.2f}'}
-        return render_template('base.html', table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').render(escape=False))
+        return render_template('teams.html', table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').render(escape=False))
 
-    @app.route('/<team>')
-    def team_page(team):
-        df = db.get_games_table(team)
+    @app.route('/<league>/<team>')
+    def team_page(league, team):
+        df = db.get_games_table(league, team)
 
         fmts = {'Date': lambda x: "{}".format(x.strftime('%m/%d')),
                 'NS': '{:.0f}'}
@@ -40,7 +46,7 @@ def create_app(test_config=None):
         def color_outcome(s):
             return ['color: green' if v=='W' else 'color: red' for v in s]
         
-        return render_template('base.html', table=df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero').render(escape=False))
+        return render_template('games.html', team=team, table=df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero').render(escape=False))
 
 
     db.init_app(app)

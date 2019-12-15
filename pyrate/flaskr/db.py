@@ -26,24 +26,32 @@ def test_db():
     df = pd.read_sql_table('teams', db)
     print(df.head())
 
-def add_link(m):
+def get_leagues():
+    """Return list of available leagues"""
+    db = get_db()
+    df = pd.read_sql_table('leagues', db)
+    return df['Name'].values
+
+def add_link(m, league):
     """Replace team name with link"""
     t = m.group(0)
-    url = url_for('team_page', team=t)
+    url = url_for('team_page', league=league, team=t)
     return '<a href="{url}">{team}</a>'.format(url=url, team=t)
 
-def get_teams_table():
+def get_teams_table(league):
     db = get_db()
+    # Todo: subset out league
     df = pd.read_sql_table('teams', db)
     df = df[['NAME', 'rank', 'rating', 'WINS', 'LOSSES', 'SoS']]
     df.rename(columns={'NAME':'Team', 'rank': 'Rank', 'rating': 'Rating', 'WINS':'W', 'LOSSES':'L'}, inplace=True)
 
-    df['Team'] = df['Team'].str.replace('(.+)',add_link)
+    func = lambda m: add_link(m, league)
+    df['Team'] = df['Team'].str.replace('(.+)',func)
     
     df.sort_values(by='Rating', ascending=False, inplace=True)
     return df
 
-def get_games_table(team_name):
+def get_games_table(league, team_name):
     db = get_db()
 
     # Todo: store team->id mapping so don't have to look up each time
@@ -60,6 +68,7 @@ def get_games_table(team_name):
                        'WL':'Result',
                        'OPP_PTS':'PA'}, inplace=True)
 
-    df['Opponent'] = df['Opponent'].str.replace('(.+)',add_link)
+    func = lambda m: add_link(m, league)
+    df['Opponent'] = df['Opponent'].str.replace('(.+)', func)
     
     return df
