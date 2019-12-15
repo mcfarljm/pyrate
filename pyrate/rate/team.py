@@ -17,7 +17,7 @@ class Team:
         del games # Prevent accidental access to old version
         self.games = self.games.astype({'PTS':'int32', 'OPP_PTS':'int32'})
         self.games['Score'] = self.games['PTS'].astype(str).str.cat(self.games['OPP_PTS'].astype(str),sep='-')
-        _fill_win_loss(self.games)
+        fill_win_loss(self.games)
         if 'Date' in self.games:
             self.games.sort_values(by='Date', inplace=True)
 
@@ -106,7 +106,7 @@ class Team:
 
         team_ids = list(np.unique(np.concatenate((df['TEAM_ID'], df['OPP_ID']))))
         games['OPP_IDX'] = games['OPP_ID'].apply(lambda x: team_ids.index(x))
-        _fill_win_loss(games)
+        fill_win_loss(games)
         return cls(team_id, games)
 
     def plot(self, by='NS'):
@@ -125,7 +125,7 @@ class Team:
         ax.set_ylabel(by)
         
 
-def _fill_win_loss(games):
+def fill_win_loss(games):
     def get_wl(row):
         if row['PTS'] > row['OPP_PTS']:
             return 'W'

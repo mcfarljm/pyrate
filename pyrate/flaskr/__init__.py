@@ -36,7 +36,11 @@ def create_app(test_config=None):
 
         fmts = {'Date': lambda x: "{}".format(x.strftime('%m/%d')),
                 'NS': '{:.0f}'}
-        return render_template('base.html', table=df.style.hide_index().format(fmts).render(escape=False))
+
+        def color_outcome(s):
+            return ['color: green' if v=='W' else 'color: red' for v in s]
+        
+        return render_template('base.html', table=df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').render(escape=False))
 
 
     db.init_app(app)

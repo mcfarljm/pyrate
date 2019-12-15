@@ -5,6 +5,8 @@ import sqlalchemy
 from flask import current_app, g, url_for
 from flask.cli import with_appcontext
 
+from pyrate.rate.team import fill_win_loss
+
 
 def get_db():
     if 'db' not in g:
@@ -47,9 +49,13 @@ def get_games_table(team_name):
     teams = pd.read_sql_table('teams', db, index_col='NAME')
     team_id = int(teams.loc[team_name,'TEAM_ID'])
     
-    df = pd.read_sql_query('SELECT games.Date, teams.name, games.PTS, games.OPP_PTS, games.LOC, games.NS FROM games INNER JOIN teams WHERE games.TEAM_ID is ? AND games.PTS IS NOT NULL AND games.OPP_ID = teams.TEAM_ID', db, params=[team_id], parse_dates=['Date'])
-    df.rename(columns={'NAME':'Opponent', 'PTS':'PF', 'OPP_PTS':'PA'}, inplace=True)
+    df = pd.read_sql_query('SELECT games.Date, games.LOC, teams.name, games.PTS, games.OPP_PTS, games.NS FROM games INNER JOIN teams WHERE games.TEAM_ID is ? AND games.PTS IS NOT NULL AND games.OPP_ID = teams.TEAM_ID', db, params=[team_id], parse_dates=['Date'])
 
-    print(df.dtypes)
-    print(df)
+    fill_win_loss(df)
+    
+    df.rename(columns={'NAME':'Opponent',
+                       'LOC':'Loc',
+                       'PTS':'PF',
+                       'WL':'Result',
+                       'OPP_PTS':'PA'}, inplace=True)
     return df
