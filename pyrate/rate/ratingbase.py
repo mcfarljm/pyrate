@@ -176,6 +176,11 @@ class RatingSystem:
             leagues within the database
         """
 
+        ## properties table (general info)
+        today = pd.to_datetime(pd.datetime.today())
+        df = pd.DataFrame({'Updated':[today]})
+        df.to_sql("properties", engine, if_exists='replace', index=False)
+
         ### leagues table
         conn = engine.connect()
         conn.execute('CREATE TABLE IF NOT EXISTS leagues ( LEAGUE_ID INTEGER PRIMARY KEY, Name TEXT UNIQUE);')

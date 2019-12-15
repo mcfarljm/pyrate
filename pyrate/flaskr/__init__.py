@@ -25,16 +25,17 @@ def create_app(test_config=None):
     @app.route('/')
     def leagues():
         leagues = db.get_leagues()
-        print('leagues:', leagues)
-        return render_template('leagues.html', leagues=leagues)
+        updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
+        return render_template('leagues.html', leagues=leagues, updated=updated)
 
     @app.route('/<league>')
     def rankings(league):
         print('rankings page:', league)
         df = db.get_teams_table(league)
+        updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
         fmts = {'Rating': '{:.2f}',
                 'SoS': '{:.2f}'}
-        return render_template('teams.html', table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').render(escape=False))
+        return render_template('teams.html', updated=updated, table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').render(escape=False))
 
     @app.route('/<league>/<team>')
     def team_page(league, team):

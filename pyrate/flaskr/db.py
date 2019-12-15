@@ -21,10 +21,12 @@ def close_db(e=None):
 def init_app(app):
     app.teardown_appcontext(close_db)
 
-def test_db():
+def date_updated():
     db = get_db()
-    df = pd.read_sql_table('teams', db)
-    print(df.head())
+    conn = db.connect()
+    output = db.execute('SELECT Updated from properties;')
+    date = pd.to_datetime(output.fetchone()[0])
+    return date
 
 def get_leagues():
     """Return list of available leagues"""

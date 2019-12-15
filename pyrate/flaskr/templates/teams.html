@@ -3,5 +3,7 @@
 {% block content %}
 <p><a href="{{ url_for('leagues') }}">Leagues</a></p>
 
+<p>Updated: {{ updated }}</p>
+
     {{ table|safe }}
 {% endblock %}
