@@ -9,5 +9,6 @@ setup(name='pyrate',
       install_requires=[
           'numpy',
           'pandas',
-          'sqlalchemy'
+          'sqlalchemy',
+          'flask'
       ])
