@@ -81,3 +81,28 @@ def get_games_table(league, team_name):
     df['Opponent'] = df['Opponent'].str.replace('(.+)', func)
     
     return df
+
+def get_scheduled_games(league, team_name):
+    db = get_db()
+
+    # Todo: avoid having to look up team_id each time?
+    conn = db.connect()
+    output = db.execute('SELECT t.TEAM_ID FROM teams t WHERE t.NAME = ? AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?);', (team_name, league))
+    team_id = output.fetchone()[0]
+
+    query = """SELECT g.Date, g.LOC, t.name FROM games g INNER JOIN teams t 
+    WHERE g.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
+    AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
+    AND g.TEAM_ID is ? AND g.PTS IS NULL AND g.OPP_ID = t.TEAM_ID;"""
+    
+    df = pd.read_sql_query(query, db, params=[league, league, team_id], parse_dates=['Date'])
+
+    df.rename(columns={'NAME':'Opponent',
+                       'LOC':'Loc'}, inplace=True)
+
+    df.sort_values(by='Date', inplace=True)
+
+    func = lambda m: add_link(m, league)
+    df['Opponent'] = df['Opponent'].str.replace('(.+)', func)
+    
+    return df

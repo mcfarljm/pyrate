@@ -40,6 +40,7 @@ def create_app(test_config=None):
     @app.route('/<league>/<team>')
     def team_page(league, team):
         df = db.get_games_table(league, team)
+        df_sched = db.get_scheduled_games(league, team)
 
         fmts = {'Date': lambda x: "{}".format(x.strftime('%m/%d')),
                 'NS': '{:.0f}'}
@@ -49,8 +50,11 @@ def create_app(test_config=None):
 
         def color_outcome(s):
             return ['color: green' if v=='W' else 'color: red' for v in s]
+
+        games = df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero').render(escape=False)
+        scheduled = df_sched.style.hide_index().format(fmts).render(escape=False)
         
-        return render_template('games.html', league=league, team=team, wins=wins, losses=losses, table=df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero').render(escape=False))
+        return render_template('games.html', league=league, team=team, wins=wins, losses=losses, table=games, scheduled=scheduled)
 
 
     db.init_app(app)
