@@ -43,10 +43,13 @@ def create_app(test_config=None):
         fmts = {'Date': lambda x: "{}".format(x.strftime('%m/%d')),
                 'NS': '{:.0f}'}
 
+        wins = sum(df['Result'] == 'W')
+        losses = sum(df['Result'] == 'L')
+
         def color_outcome(s):
             return ['color: green' if v=='W' else 'color: red' for v in s]
         
-        return render_template('games.html', team=team, table=df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero').render(escape=False))
+        return render_template('games.html', league=league, team=team, wins=wins, losses=losses, table=df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero').render(escape=False))
 
 
     db.init_app(app)

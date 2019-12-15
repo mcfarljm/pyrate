@@ -41,7 +41,7 @@ def add_link(m, league):
 def get_teams_table(league):
     db = get_db()
 
-    query = """SELECT t.NAME, t.rank, t.rating, t.WINS, t.LOSSES, t.SoS FROM teams t
+    query = """SELECT t.rank, t.NAME, t.rating, t.WINS, t.LOSSES, t.SoS FROM teams t
     WHERE t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?);"""
     df = pd.read_sql_query(query, db, params=[league])
     df.rename(columns={'NAME':'Team', 'rank': 'Rank', 'rating': 'Rating', 'WINS':'W', 'LOSSES':'L'}, inplace=True)
