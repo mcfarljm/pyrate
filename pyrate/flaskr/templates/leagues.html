@@ -5,7 +5,7 @@
 
 <ul>
   {% for league in leagues %}
-  <li><a href={{ url_for('rankings', league=league ) }}>{{ league }}</a></li>
+  <li><a href="{{ url_for('rankings', league=league ) }}">{{ league }}</a></li>
   {% endfor %}
 </ul>
 

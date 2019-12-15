@@ -3,7 +3,7 @@
 {% block content %}
 <h3>{{ team }} ({{ wins }}-{{ losses }})</h3>
 
-<p><a href={{ url_for('rankings', league=league ) }}>{{ league }}</a></p>
+<p><a href="{{ url_for('rankings', league=league ) }}">{{ league }}</a></p>
 
     {{ table|safe }}
 {% endblock %}
