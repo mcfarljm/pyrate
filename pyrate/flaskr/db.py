@@ -54,14 +54,29 @@ def get_teams_table(league):
     df.sort_values(by='Rating', ascending=False, inplace=True)
     return df
 
-def get_games_table(league, team_name):
+def get_team_id(league, team_name):
+    # Todo: is there a better way of doing queries instead of looking
+    # up team_id each time?
     db = get_db()
 
-    # Todo: avoid having to look up team_id each time?
     conn = db.connect()
     output = db.execute('SELECT t.TEAM_ID FROM teams t WHERE t.NAME = ? AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?);', (team_name, league))
     team_id = output.fetchone()[0]
+    return team_id
 
+def get_team_data(league, team_id):
+    db = get_db()
+
+    query = """SELECT t.rank, t.rating, t.WINS, t.LOSSES, t.SoS FROM teams t
+    WHERE t.TEAM_ID = ?
+    AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?);"""
+    conn = db.connect()
+    output = db.execute(query, (team_id, league))
+    return output.fetchone()
+
+def get_games_table(league, team_id):
+    db = get_db()
+    
     query = """SELECT g.Date, g.LOC, t.name, g.PTS, g.OPP_PTS, g.NS FROM games g INNER JOIN teams t 
     WHERE g.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
     AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
@@ -82,14 +97,9 @@ def get_games_table(league, team_name):
     
     return df
 
-def get_scheduled_games(league, team_name):
+def get_scheduled_games(league, team_id):
     db = get_db()
-
-    # Todo: avoid having to look up team_id each time?
-    conn = db.connect()
-    output = db.execute('SELECT t.TEAM_ID FROM teams t WHERE t.NAME = ? AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?);', (team_name, league))
-    team_id = output.fetchone()[0]
-
+    
     query = """SELECT g.Date, g.LOC, t.name FROM games g INNER JOIN teams t 
     WHERE g.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
     AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)

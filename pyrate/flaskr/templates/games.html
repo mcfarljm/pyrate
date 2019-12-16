@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ team }}{% endblock %}
 {% block content %}
-<h3>{{ team }} ({{ wins }}-{{ losses }})</h3>
+<h3>{{ team }} ({{ team_data['WINS'] }}-{{ team_data['LOSSES'] }})</h3>
+
+<p>Rank: {{ team_data['rank'] }}</p>
 
 <p><a href="{{ url_for('rankings', league=league ) }}">{{ league }}</a></p>
 
