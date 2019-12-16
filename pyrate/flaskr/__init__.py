@@ -34,7 +34,7 @@ def create_app(test_config=None):
         updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
         fmts = {'Rating': '{:.2f}',
                 'SoS': '{:.2f}'}
-        return render_template('ratings.html', rating=rating, updated=updated, table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').render(escape=False))
+        return render_template('ratings.html', rating=rating, updated=updated, table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').set_uuid('ratingTable').render(escape=False))
 
     @app.route('/<rating>/<team>')
     def team_page(rating, team):
@@ -50,8 +50,8 @@ def create_app(test_config=None):
         def color_outcome(s):
             return ['color: green' if v=='W' else 'color: red' for v in s]
 
-        games = df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero').render(escape=False)
-        scheduled = df_sched.style.hide_index().format(fmts).render(escape=False)
+        games = df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero').set_uuid('gameTable').render(escape=False)
+        scheduled = df_sched.style.hide_index().format(fmts).set_uuid('scheduleTable').render(escape=False)
         
         return render_template('team.html', rating=rating, team=team, team_data=td, table=games, scheduled=scheduled)
 
