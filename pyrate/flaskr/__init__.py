@@ -35,7 +35,7 @@ def create_app(test_config=None):
         updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
         fmts = {'Rating': '{:.2f}',
                 'SoS': '{:.2f}'}
-        return render_template('teams.html', updated=updated, table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').render(escape=False))
+        return render_template('teams.html', league=league, updated=updated, table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').render(escape=False))
 
     @app.route('/<league>/<team>')
     def team_page(league, team):
