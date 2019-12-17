@@ -77,10 +77,10 @@ def get_team_data(league, team_id):
 def get_games_table(league, team_id):
     db = get_db()
     
-    query = """SELECT g.Date, g.LOC, t.name, g.PTS, g.OPP_PTS, g.NS FROM games g INNER JOIN teams t 
+    query = """SELECT g.Date, g.LOC, t.name, t.rank, g.PTS, g.OPP_PTS, g.NS FROM games g INNER JOIN teams t ON g.OPP_ID = t.TEAM_ID
     WHERE g.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
     AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
-    AND g.TEAM_ID is ? AND g.PTS IS NOT NULL AND g.OPP_ID = t.TEAM_ID;"""
+    AND g.TEAM_ID is ? AND g.PTS IS NOT NULL;"""
     
     df = pd.read_sql_query(query, db, params=[league, league, team_id], parse_dates=['Date'])
 
@@ -88,9 +88,13 @@ def get_games_table(league, team_id):
     
     df.rename(columns={'NAME':'Opponent',
                        'LOC':'Loc',
+                       'rank':'OR',
                        'PTS':'PF',
                        'WL':'Result',
                        'OPP_PTS':'PA'}, inplace=True)
+
+    # Reorder (to move Result)
+    df = df[['Date','Loc','Opponent','OR','Result','PF','PA','NS']]
 
     func = lambda m: add_link(m, league)
     df['Opponent'] = df['Opponent'].str.replace('(.+)', func)
@@ -100,15 +104,16 @@ def get_games_table(league, team_id):
 def get_scheduled_games(league, team_id):
     db = get_db()
     
-    query = """SELECT g.Date, g.LOC, t.name FROM games g INNER JOIN teams t 
+    query = """SELECT g.Date, g.LOC, t.name, t.rank FROM games g INNER JOIN teams t ON g.OPP_ID = t.TEAM_ID
     WHERE g.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
     AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
-    AND g.TEAM_ID is ? AND g.PTS IS NULL AND g.OPP_ID = t.TEAM_ID;"""
+    AND g.TEAM_ID is ? AND g.PTS IS NULL;"""
     
     df = pd.read_sql_query(query, db, params=[league, league, team_id], parse_dates=['Date'])
 
     df.rename(columns={'NAME':'Opponent',
-                       'LOC':'Loc'}, inplace=True)
+                       'LOC':'Loc',
+                       'rank':'OR'}, inplace=True)
 
     df.sort_values(by='Date', inplace=True)
 
