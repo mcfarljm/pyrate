@@ -60,29 +60,31 @@ def get_team_id(league, team_name):
     db = get_db()
 
     conn = db.connect()
-    output = db.execute('SELECT t.TEAM_ID FROM teams t WHERE t.NAME = ? AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?);', (team_name, league))
+    output = db.execute("""SELECT t.TEAM_ID FROM teams t INNER JOIN leagues l ON t.LEAGUE_ID = l.LEAGUE_ID
+    WHERE t.NAME = ? AND l.Name = ?;""", (team_name, league))
+
     team_id = output.fetchone()[0]
     return team_id
 
 def get_team_data(league, team_id):
     db = get_db()
 
-    query = """SELECT t.rank, t.rating, t.WINS, t.LOSSES, t.SoS FROM teams t
-    WHERE t.TEAM_ID = ?
-    AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?);"""
-    conn = db.connect()
-    output = db.execute(query, (team_id, league))
-    return output.fetchone()
+    query = """SELECT t.rank, t.rating, t.WINS, t.LOSSES, t.SoS FROM teams t INNER JOIN leagues l ON t.LEAGUE_ID = l.LEAGUE_ID
+    WHERE t.TEAM_ID = ? AND l.Name = ?;"""
+    with db.connect() as conn:
+        output = conn.execute(query, (team_id, league))
+        result = output.fetchone()
+    return result
 
 def get_games_table(league, team_id):
     db = get_db()
-    
-    query = """SELECT g.Date, g.LOC, t.name, t.rank, g.PTS, g.OPP_PTS, g.NS FROM games g INNER JOIN teams t ON g.OPP_ID = t.TEAM_ID
-    WHERE g.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
-    AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
-    AND g.TEAM_ID is ? AND g.PTS IS NOT NULL;"""
-    
-    df = pd.read_sql_query(query, db, params=[league, league, team_id], parse_dates=['Date'])
+
+    query = """SELECT g.Date, g.LOC, t.name, t.rank, g.PTS, g.OPP_PTS, g.NS FROM 
+    games g INNER JOIN leagues l on g.LEAGUE_ID = l.LEAGUE_ID
+    INNER JOIN teams t ON g.OPP_ID = t.TEAM_ID
+    WHERE l.Name = ? AND g.TEAM_ID = ? AND g.PTS IS NOT NULL AND t.LEAGUE_ID = l.LEAGUE_ID;"""    
+
+    df = pd.read_sql_query(query, db, params=[league, team_id], parse_dates=['Date'])
 
     fill_win_loss(df)
     
@@ -103,13 +105,13 @@ def get_games_table(league, team_id):
 
 def get_scheduled_games(league, team_id):
     db = get_db()
+
+    query = """SELECT g.Date, g.LOC, t.name, t.rank FROM 
+    games g INNER JOIN leagues l on g.LEAGUE_ID = l.LEAGUE_ID
+    INNER JOIN teams t ON g.OPP_ID = t.TEAM_ID
+    WHERE l.Name = ? AND g.TEAM_ID = ? AND g.PTS IS NULL AND t.LEAGUE_ID = l.LEAGUE_ID;"""    
     
-    query = """SELECT g.Date, g.LOC, t.name, t.rank FROM games g INNER JOIN teams t ON g.OPP_ID = t.TEAM_ID
-    WHERE g.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
-    AND t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?)
-    AND g.TEAM_ID is ? AND g.PTS IS NULL;"""
-    
-    df = pd.read_sql_query(query, db, params=[league, league, team_id], parse_dates=['Date'])
+    df = pd.read_sql_query(query, db, params=[league, team_id], parse_dates=['Date'])
 
     df.rename(columns={'NAME':'Opponent',
                        'LOC':'Loc',
