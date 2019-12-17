@@ -83,6 +83,8 @@ class RatingSystem:
         num_sched = sum([len(t.scheduled) for t in self.teams])//2
         if num_sched > 0:
             print('{} scheduled games'.format(num_sched))
+        if self.homecourt:
+            print('home advantage: {:.1f}'.format(self.home_adv))
 
     def store_ratings(self):
         "After child method is called, organize rating data into DataFrame"""
@@ -183,7 +185,7 @@ class RatingSystem:
 
         ### leagues table
         conn = engine.connect()
-        conn.execute('CREATE TABLE IF NOT EXISTS leagues ( LEAGUE_ID INTEGER PRIMARY KEY, Name TEXT UNIQUE);')
+        conn.execute('CREATE TABLE IF NOT EXISTS leagues ( LEAGUE_ID INTEGER PRIMARY KEY, Name TEXT UNIQUE, Home_Adv REAL);')
 
         # Check whether league exists:
         output = conn.execute('SELECT LEAGUE_ID FROM leagues WHERE Name=?', (league_name,))
@@ -194,6 +196,8 @@ class RatingSystem:
             conn.execute('INSERT INTO leagues (Name) VALUES (?);', (league_name,))
             output = conn.execute('SELECT last_insert_rowid();')
             league_id = output.fetchone()[0]
+        if self.homecourt:
+            conn.execute('UPDATE leagues SET Home_Adv = ? WHERE LEAGUE_ID = ?;', (self.home_adv, league_id))
         
         ### ratings table
         team_names = [t.name for t in self.teams]
