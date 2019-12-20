@@ -118,7 +118,11 @@ class RatingSystem:
         For now, does not account for home court"""
         for team in self.teams:
             team.sos_past = np.mean([self.teams[idx].rating for idx in team.games['opponent_index']])
-            team.sos_future = np.mean([self.teams[idx].rating for idx in team.scheduled['opponent_index']])
+            if len(team.scheduled) > 0:
+                team.sos_future = np.mean([self.teams[idx].rating for idx in team.scheduled['opponent_index']])
+            else:
+                # Prevent warning
+                team.sos_future = np.nan
             team.sos_all = np.mean([self.teams[idx].rating for idx in np.concatenate((team.games['opponent_index'],team.scheduled['opponent_index']))])
 
     def display_ratings(self, n=10):
