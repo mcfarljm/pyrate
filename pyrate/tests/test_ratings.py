@@ -37,11 +37,11 @@ class ToyLeagueHyper(unittest.TestCase):
             self.assertAlmostEqual(team.rating, expected_rating)
 
     def testHomeCourt(self):
-        expected_ratings = [1.875, -2.5, -1.625, 0.25]
+        expected_ratings = [2.0277777777, -2.5, -1.47222222222, 0.5555555555]
         lsq = leastsquares.LeastSquares(self.league, homecourt=True)
         for team, expected_rating in zip(lsq.teams, expected_ratings):
             self.assertAlmostEqual(team.rating, expected_rating)
-        self.assertAlmostEqual(lsq.home_adv, 2.0)
+        self.assertAlmostEqual(lsq.home_adv, 1.38888888)
 
     def testStrengtOfSchedule(self):
         expected_sos_vals = [-0.625, 0.83333333, -0.625, -0.416666666]
@@ -83,11 +83,11 @@ class ToyLeagueGames(unittest.TestCase):
             self.assertAlmostEqual(team.rating, expected_rating)
 
     def testHomeCourt(self):
-        expected_ratings = [1.875, -2.5, -1.625, 0.25]
+        expected_ratings = [2.0277777777, -2.5, -1.47222222222, 0.5555555555]
         lsq = leastsquares.LeastSquares(self.league, homecourt=True)
         for team, expected_rating in zip(lsq.teams, expected_ratings):
             self.assertAlmostEqual(team.rating, expected_rating)
-        self.assertAlmostEqual(lsq.home_adv, 2.0)
+        self.assertAlmostEqual(lsq.home_adv, 1.38888888)
 
     def testStrengtOfSchedule(self):
         expected_sos_vals = [-0.625, 0.83333333, -0.625, -0.416666666]

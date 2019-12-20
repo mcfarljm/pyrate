@@ -49,6 +49,11 @@ class LeastSquares(RatingSystem):
             XX[i,i] = sum(self.teams[i].games['train'])
             #print('team {} games: {}'.format(i, XX[i,i]))
 
+        if self.homecourt:
+            # Copy the home counts from the last column into the last
+            # row, to make the matrix symmetric
+            XX[-1,:] = XX[:,-1]
+
         # Replace last team equation to force sum(ratings)=0:
         XX[nteam-1,:nteam] = 1.0
         ratings[nteam-1] = 0.0
