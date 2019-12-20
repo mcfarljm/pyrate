@@ -47,7 +47,7 @@ class ToyLeagueHyper(unittest.TestCase):
         expected_sos_vals = [-0.625, 0.83333333, -0.625, -0.416666666]
         lsq = leastsquares.LeastSquares(self.league)
         for team, expected_sos in zip(lsq.teams, expected_sos_vals):
-            self.assertAlmostEqual(team.sos, expected_sos)
+            self.assertAlmostEqual(team.sos_past, expected_sos)
 
     def testEvaluatePredWins(self):
         lsq = leastsquares.LeastSquares(self.league)
@@ -93,7 +93,7 @@ class ToyLeagueGames(unittest.TestCase):
         expected_sos_vals = [-0.625, 0.83333333, -0.625, -0.416666666]
         lsq = leastsquares.LeastSquares(self.league)
         for team, expected_sos in zip(lsq.teams, expected_sos_vals):
-            self.assertAlmostEqual(team.sos, expected_sos)
+            self.assertAlmostEqual(team.sos_past, expected_sos)
 
     def testEvaluatePredWins(self):
         lsq = leastsquares.LeastSquares(self.league)
