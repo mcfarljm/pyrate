@@ -8,13 +8,13 @@ from flask.cli import with_appcontext
 
 def get_db():
     if 'db' not in g:
-        print('creating')
+        #print('creating')
         g.db = sqlalchemy.create_engine(current_app.config['DATABASE'])
     return g.db
 
 def close_db(e=None):
     db = g.pop('db', None)
-    print('dropping')
+    #print('dropping')
 
 def init_app(app):
     app.teardown_appcontext(close_db)

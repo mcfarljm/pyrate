@@ -30,7 +30,6 @@ def create_app(test_config=None):
 
     @app.route('/<rating>')
     def rating_system(rating):
-        print('rankings page:', rating)
         df = db.get_rating_table(rating)
         updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
         fmts = {'Rating': '{:.2f}',
