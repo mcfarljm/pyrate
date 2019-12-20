@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import math
 
 from .ratingbase import RatingSystem
@@ -56,30 +57,42 @@ class LeastSquares(RatingSystem):
 
         # Add "Normalized Score" to team data.  This is essentially how
         # much was "earned" for each game.
-        for team in self.teams:
+        for iteam, team in enumerate(self.teams):
             for game_id, game in team.games.iterrows():
                 if not game['train']:
                     continue
                 opp_rating = ratings[game['opponent_index']]
                 team.games.loc[game_id,'normalized_score'] = game['GOM'] + opp_rating
+                team.games.loc[game_id,'predicted_GOM'] = ratings[iteam] - opp_rating
                 if self.homecourt:
                     # Including home advantage in the normalized score is
                     # consistent with the rating being equal to the mean
                     # of the normalized scores.
                     loc = loc_map[game['location']] # numerical value
                     team.games.loc[game_id,'normalized_score'] -= loc*ratings[-1]
+                    team.games.loc[game_id,'predicted_GOM'] += loc*ratings[-1]
 
-        # Estimate residual standard deviation, which can be used in
-        # probability calculations
-        SS = sum([sum(t.games.loc[t.games['train'],'normalized_score']**2) for t in self.teams]) / 2.0 # Divide by two b/c each game counted twice
-        count = sum([sum(t.games['train']) for t in self.teams]) / 2
-        self.sigma = np.sqrt(SS/count)
-
+        # Estimate R-squared and residual standard deviation, which
+        # can be used in probability calculations
+        all_games = pd.concat([t.games for t in self.teams], ignore_index=True)
+        all_games = all_games[all_games['train']]
+        # Each game is represented twice, just choose 1.  (Believe
+        # that this works the same in either "direction", although
+        # e.g., mean(GOM) would not necssarily be the same if using a
+        # score cap.)
+        all_games = all_games[ all_games['team_id'] < all_games['opponent_id'] ]
+        SST = sum( (all_games['GOM'] - np.mean(all_games['GOM']))**2 )
+        residuals = all_games['GOM'] - all_games['predicted_GOM']
+        SSE = sum( (residuals - np.mean(residuals))**2 )
+        self.Rsquared = 1.0 - SSE/SST
+        self.sigma = np.sqrt( SSE / (len(all_games)-1) )
+        
         if self.homecourt:
             self.ratings = ratings[:-1]
             self.home_adv = ratings[-1]
         else:
             self.ratings = ratings
+            self.home_adv = None
 
         self.store_ratings()
 
@@ -90,7 +103,7 @@ class LeastSquares(RatingSystem):
 
         For the least squares system, this is based on normally distributed residuals"""
         mu = team1.rating - team2.rating
-        if loc is not None:
+        if self.homecourt and loc is not None:
             try:
                 mu += loc * self.home_adv
             except AttributeError:

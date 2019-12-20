@@ -205,11 +205,9 @@ class RatingSystem:
             if result:
                 rating_id = result[0]
             else:
-                conn.execute('INSERT INTO ratings (name) VALUES (?);', (rating_name,))
+                conn.execute('INSERT INTO ratings (name, home_advantage, r_squared) VALUES (?,?,?);', (rating_name, self.home_adv, self.Rsquared))
                 output = conn.execute('SELECT last_insert_rowid();')
                 rating_id = output.fetchone()[0]
-            if self.homecourt:
-                conn.execute('UPDATE ratings SET home_advantage = ? WHERE rating_id = ?;', (self.home_adv, rating_id))
 
             ### teams table
             team_names = [t.name for t in self.teams]
