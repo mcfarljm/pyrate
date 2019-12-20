@@ -13,18 +13,18 @@ class Team:
         self.id = id
 
         # Split up into games and schedule
-        unplayed = (games['PTS'].isnull() | games['OPP_PTS'].isnull())
+        unplayed = (games['points'].isnull() | games['opponent_points'].isnull())
         
         self.games = games[~unplayed].copy()
         self.scheduled = games[unplayed].copy()
         del games # Prevent accidental access to old version
-        self.games = self.games.astype({'PTS':'int32', 'OPP_PTS':'int32'})
-        self.games['Score'] = self.games['PTS'].astype(str).str.cat(self.games['OPP_PTS'].astype(str),sep='-')
+        self.games = self.games.astype({'points':'int32', 'opponent_points':'int32'})
+        self.games['score'] = self.games['points'].astype(str).str.cat(self.games['opponent_points'].astype(str),sep='-')
         fill_win_loss(self.games)
-        if 'Date' in self.games:
-            self.games.sort_values(by='Date', inplace=True)
+        if 'date' in self.games:
+            self.games.sort_values(by='date', inplace=True)
 
-        self.wins = sum(self.games['PTS'] > self.games['OPP_PTS'])
+        self.wins = sum(self.games['points'] > self.games['opponent_points'])
         self.losses = len(self.games) - self.wins
 
     @classmethod
@@ -38,34 +38,34 @@ class Team:
         ----------
         df : pandas Data frame
             A data frame with league data, containing at least the
-            following columns: 'GAME_ID', 'TEAM_ID', 'PTS'.  Optional
-            columns are 'DATE', 'LOC' (1 for home, -1 for away, 0 for
-            neutral).  Scheduled (unplayed) games can be represented
-            by using np.nan for PTS.
+            following columns: 'game_id', 'team_id', 'points'.
+            Optional columns are 'date', 'location' (1 for home, -1
+            for away, 0 for neutral).  Scheduled (unplayed) games can
+            be represented by using np.nan for 'points'.
         """
-        if 'TEAM_ID' not in df:
-            raise ValueError("expected 'TEAM_ID' column")
-        elif 'GAME_ID' not in df:
-            raise ValueError("expected 'GAME_ID' column")
-        elif 'PTS' not in df:
-            raise ValueError("expected 'PTS' column")
+        if 'team_id' not in df:
+            raise ValueError("expected 'team_id' column")
+        elif 'game_id' not in df:
+            raise ValueError("expected 'game_id' column")
+        elif 'points' not in df:
+            raise ValueError("expected 'points' column")
         
-        games = df[df['TEAM_ID'] == team_id].copy()
-        games.set_index('GAME_ID', inplace=True)
+        games = df[df['team_id'] == team_id].copy()
+        games.set_index('game_id', inplace=True)
 
-        opp_games = df[ (df['GAME_ID'].isin(games.index)) & (df['TEAM_ID'] != team_id) ].copy()
-        opp_games.rename(columns={'TEAM_ID':'OPP_ID', 'PTS':'OPP_PTS', 'LOC':'OPP_LOC'}, inplace=True )
-        opp_games.set_index('GAME_ID', inplace=True)
+        opp_games = df[ (df['game_id'].isin(games.index)) & (df['team_id'] != team_id) ].copy()
+        opp_games.rename(columns={'team_id':'opponent_id', 'points':'opponent_points', 'location':'opponent_location'}, inplace=True )
+        opp_games.set_index('game_id', inplace=True)
 
         games = games.join(opp_games)
 
-        team_ids = list(df['TEAM_ID'].unique())
-        games['OPP_IDX'] = games['OPP_ID'].apply(lambda x: team_ids.index(x))
+        team_ids = list(df['team_id'].unique())
+        games['opponent_index'] = games['opponent_id'].apply(lambda x: team_ids.index(x))
 
         # For compatibility with Massey data, treat 0 points as
         # scheduled game (could be added as a flag)
-        scheduled = (games['PTS'] == 0) & (games['OPP_PTS'] == 0)
-        games.loc[scheduled,['PTS','OPP_PTS']] = np.nan # Flag scheduled games
+        scheduled = (games['points'] == 0) & (games['opponent_points'] == 0)
+        games.loc[scheduled,['points','opponent_points']] = np.nan # Flag scheduled games
         
         return cls(team_id, games)
 
@@ -80,41 +80,45 @@ class Team:
         ----------
         df : pandas Data frame
             A data frame with league data, containing at least the
-            following columns: 'TEAM_ID', 'PTS', 'OPP_ID', 'OPP_PTS'.
-            Optional columns are 'DATE', 'LOC', and 'OPP_LOC' (1 for
-            home, -1 for away, 0 for neutral). Scheduled (unplayed)
-            games can be represented by using np.nan for PTS.
+            following columns: 'team_id', 'points', 'opponent_id',
+            'opponent_points'.  Optional columns are 'date',
+            'location', and 'opponent_location' (1 for home, -1 for
+            away, 0 for neutral). Scheduled (unplayed) games can be
+            represented by using np.nan for 'points'.
         """
-        if 'TEAM_ID' not in df:
-            raise ValueError("expected 'TEAM_ID' column")
-        elif 'PTS' not in df:
-            raise ValueError("expected 'PTS' column")
-        elif 'OPP_ID' not in df:
-            raise ValueError("expected 'OPP_ID' column")
-        elif 'OPP_PTS' not in df:
-            raise ValueError("expected 'OPP_PTS' column")
+        if 'team_id' not in df:
+            raise ValueError("expected 'team_id' column")
+        elif 'points' not in df:
+            raise ValueError("expected 'points' column")
+        elif 'opponent_id' not in df:
+            raise ValueError("expected 'opponent_id' column")
+        elif 'opponent_points' not in df:
+            raise ValueError("expected 'opponent_points' column")
         
-        games_lhs = df[df['TEAM_ID'] == team_id].copy()
+        games_lhs = df[df['team_id'] == team_id].copy()
 
-        games_rhs = df[df['OPP_ID'] == team_id].copy()
+        games_rhs = df[df['opponent_id'] == team_id].copy()
 
         # games_rhs is "backwards" and needs to be flipped
-        games_rhs.rename(columns={'TEAM_ID':'OPP_ID', 'OPP_ID':'TEAM_ID',
-                                  'PTS':'OPP_PTS', 'OPP_PTS':'PTS'},
+        games_rhs.rename(columns={'team_id':'opponent_id',
+                                  'opponent_id':'team_id',
+                                  'points':'opponent_points',
+                                  'opponent_points':'points'},
                          inplace=True)
-        if 'LOC' in games_rhs:
-            games_rhs.rename(columns={'LOC':'OPP_LOC', 'OPP_LOC':'LOC'},
+        if 'location' in games_rhs:
+            games_rhs.rename(columns={'location':'opponent_location',
+                                      'opponent_location':'location'},
                              inplace=True)
         games = pd.concat((games_lhs, games_rhs), sort=False)
 
-        team_ids = list(np.unique(np.concatenate((df['TEAM_ID'], df['OPP_ID']))))
-        games['OPP_IDX'] = games['OPP_ID'].apply(lambda x: team_ids.index(x))
+        team_ids = list(np.unique(np.concatenate((df['team_id'], df['opponent_id']))))
+        games['opponent_index'] = games['opponent_id'].apply(lambda x: team_ids.index(x))
         fill_win_loss(games)
         return cls(team_id, games)
 
-    def plot(self, by='NS'):
+    def plot(self, by='normalized_score'):
         f, ax = plt.subplots()
-        ax.plot(self.games['Date'], self.games[by], 'o')
+        ax.plot(self.games['date'], self.games[by], 'o')
 
         xl = ax.get_xlim()
         yl = ax.get_ylim()
@@ -124,18 +128,18 @@ class Team:
         ax.set_ylim(-ym,ym)
 
         ax.set_title(self.name.replace('_',' '))
-        ax.set_xlabel('Date')
+        ax.set_xlabel('date')
         ax.set_ylabel(by)
         
 
 def fill_win_loss(games):
     def get_wl(row):
-        if row['PTS'] > row['OPP_PTS']:
+        if row['points'] > row['opponent_points']:
             return 'W'
-        elif row['PTS'] < row['OPP_PTS']:
+        elif row['points'] < row['opponent_points']:
             return 'L'
         else:
             return 'T'
-    games['WL'] = games.apply(get_wl, axis=1)    
+    games['result'] = games.apply(get_wl, axis=1)    
 
         

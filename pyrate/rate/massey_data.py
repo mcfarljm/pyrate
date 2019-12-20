@@ -46,21 +46,21 @@ class MasseyURL:
 
 
 def league_from_massey_hyper_csv(games_file, teams_file):
-    df = pd.read_csv(games_file, names=['days','Date','GAME_ID','RESULT_ID','TEAM_ID','LOC','PTS'], header=None)
-    df['LOC'] = df['LOC'].map(loc_map)
-    df['Date'] = pd.to_datetime(df['Date'].astype(str))
+    df = pd.read_csv(games_file, names=['days','date','game_id','result_id','team_id','location','points'], header=None)
+    df['location'] = df['location'].map(loc_map)
+    df['date'] = pd.to_datetime(df['date'].astype(str))
     df.drop(columns='days', inplace=True)
     names = pd.read_csv(teams_file, index_col=0, squeeze=True, header=None, skipinitialspace=True)
     return ratingbase.League.from_hyper_table(df, team_names=names)
 
 def league_from_massey_games_csv(games_file, teams_file):
-    df = pd.read_csv(games_file, names=['days','Date','TEAM_ID','LOC', 'PTS','OPP_ID','OPP_LOC','OPP_PTS'], header=None)
-    df['LOC'] = df['LOC'].map(loc_map)
-    df['OPP_LOC'] = df['OPP_LOC'].map(loc_map)
-    df['Date'] = pd.to_datetime(df['Date'].astype(str))
+    df = pd.read_csv(games_file, names=['days','date','team_id','location', 'points','opponent_id','opponent_location','opponent_points'], header=None)
+    df['location'] = df['location'].map(loc_map)
+    df['opponent_location'] = df['opponent_location'].map(loc_map)
+    df['date'] = pd.to_datetime(df['date'].astype(str))
     df.drop(columns='days', inplace=True)
     names = pd.read_csv(teams_file, index_col=0, squeeze=True, header=None, skipinitialspace=True)
-    scheduled = (df['PTS'] == 0) & (df['OPP_PTS'] == 0)
-    df.loc[scheduled,['PTS','OPP_PTS']] = np.nan # Flag scheduled games
+    scheduled = (df['points'] == 0) & (df['opponent_points'] == 0)
+    df.loc[scheduled,['points','opponent_points']] = np.nan # Flag scheduled games
     return ratingbase.League.from_games_table(df, team_names=names)
         

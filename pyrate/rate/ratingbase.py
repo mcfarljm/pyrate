@@ -28,14 +28,14 @@ class League:
         if team_names is not None:
             for team in teams:
                 team.name = team_names[team.id]
-                team.games['Opponent'] = team.games['OPP_ID'].map(team_names)
+                team.games['opponent'] = team.games['opponent_id'].map(team_names)
             self.team_dict = {t.name: t for t in teams}
         for team in self.teams:
-            team.games['TRAIN'] = True
+            team.games['train'] = True
         # if max_date_train is not None:
         #     for team in self.teams:
         #         team.set_train_flag_by_date(max_date_train)
-        #     print('Training on {} games'.format(sum([sum(t.games['TRAIN']) for t in self.teams]) / 2))
+        #     print('Training on {} games'.format(sum([sum(t.games['train']) for t in self.teams]) / 2))
 
     @classmethod
     def from_hyper_table(cls, df, team_names=None, max_date_train=None):
@@ -45,11 +45,11 @@ class League:
         ----------
         df : pandas Data frame
             A data frame with league data, containing at least the
-            following columns: 'GAME_ID', 'TEAM_ID', 'PTS'.
-            Optional columns are 'DATE', 'LOC' (1 for home, -1
+            following columns: 'game_id', 'team_id', 'points'.
+            Optional columns are 'date', 'location' (1 for home, -1
             for away, 0 for neutral).
         """
-        team_ids = df['TEAM_ID'].unique()
+        team_ids = df['team_id'].unique()
         teams = [Team.from_hyper_table(df, id) for id in team_ids]
         return cls(teams, team_names=team_names, max_date_train=max_date_train)
 
@@ -61,11 +61,12 @@ class League:
         ----------
         df : pandas Data frame
             A data frame with league data, containing at least the
-            following columns: 'TEAM_ID', 'PTS', 'OPP_ID', 'OPP_PTS'.
-            Optional columns are 'DATE', 'LOC', and 'OPP_LOC' (1 for
-            home, -1 for away, 0 for neutral).
+            following columns: 'team_id', 'points', 'opponent_id',
+            'opponent_points'.  Optional columns are 'date',
+            'location', and 'opponent_location' (1 for home, -1 for
+            away, 0 for neutral).
         """
-        team_ids = np.unique(np.concatenate((df['TEAM_ID'], df['OPP_ID'])))
+        team_ids = np.unique(np.concatenate((df['team_id'], df['opponent_id'])))
         teams = [Team.from_games_table(df, id) for id in team_ids]
         return cls(teams, team_names=team_names, max_date_train=max_date_train)
 
@@ -104,7 +105,7 @@ class RatingSystem:
             index = [t.id for t in self.teams]
         self.ratings = pd.DataFrame({'rating': ratings,
                                      'rank': rank_array(ratings),
-                                     'SoS': sos},
+                                     'strength_of_schedule': sos},
                                     index=index)
 
     def get_strength_of_schedule(self):
@@ -112,7 +113,7 @@ class RatingSystem:
 
         For now, does not account for home court"""
         for team in self.teams:
-            team.sos = np.mean([self.teams[idx].rating for idx in team.games['OPP_IDX']])
+            team.sos = np.mean([self.teams[idx].rating for idx in team.games['opponent_index']])
 
     def display_ratings(self, n=10):
         print(self.ratings.sort_values(by='rating', ascending=False).head(n))    
@@ -124,14 +125,14 @@ class RatingSystem:
         pred_win_count = 0
         for team in self.teams:
             for game_id, game in team.games.iterrows():
-                if exclude_train and game['TRAIN']:
+                if exclude_train and game['train']:
                     continue
                 count += 1
-                loc = 1 if game['LOC']=='H' else -1
-                pred = 'W' if self.predict_win_probability(team, self.teams[game['OPP_IDX']], loc) > 0.5 else 'L'
+                loc = 1 if game['location']=='H' else -1
+                pred = 'W' if self.predict_win_probability(team, self.teams[game['opponent_index']], loc) > 0.5 else 'L'
                 if pred == 'W':
                     pred_win_count += 1
-                if pred == game['WL']:
+                if pred == game['result']:
                     correct += 1
         count = count // 2
         correct = correct // 2
@@ -147,17 +148,17 @@ class RatingSystem:
         total_count = 0 # Sanity check
         for team in self.teams:
             for game_id, game in team.games.iterrows():
-                if exclude_train and game['TRAIN']:
+                if exclude_train and game['train']:
                     continue                
-                loc = 1 if game['LOC']=='H' else -1
-                pred_prob = self.predict_win_probability(team, self.teams[game['OPP_IDX']], loc)
+                loc = 1 if game['location']=='H' else -1
+                pred_prob = self.predict_win_probability(team, self.teams[game['opponent_index']], loc)
                 pred_outcome = 'W' if pred_prob > 0.5 else 'L'
                 if pred_prob > 0.5:
                     total_count += 1
                     # Determine interval
                     interval = np.where(pred_prob>pvals)[0][-1]
                     counts[interval] += 1
-                    if pred_outcome == game['WL']:
+                    if pred_outcome == game['result']:
                         correct[interval] += 1
 
         print("Total count:", total_count)
@@ -169,13 +170,13 @@ class RatingSystem:
 
         Create "teams" and "games" tables.  The "games" table also
         includes scheduled games.  Each game in the games table is
-        represented twice, once for each team in the TEAM_ID
-        position
+        represented twice, once for each team in the team_id position
 
         Parameters
         ----------
         rating_name : str
             A unique name for the rating
+
         """
 
         with engine.connect() as conn:
@@ -209,8 +210,6 @@ class RatingSystem:
             df['losses'] = [t.losses for t in self.teams]
             df['name'] = df.index
 
-            df.rename(columns={'SoS':'strength_of_schedule'}, inplace=True)
-
             # First delete previous entries for this league:
             conn.execute('DELETE FROM teams WHERE rating_id=?;', (rating_id,))
 
@@ -226,17 +225,11 @@ class RatingSystem:
 
             ### games table
             df = pd.concat([t.games for t in self.teams])
-            df = df.loc[:,['TEAM_ID','OPP_ID','PTS','OPP_PTS','LOC','Date','NS','WL']]
+            df = df.loc[:,['team_id','opponent_id','points','opponent_points','location','date','normalized_score','result']]
             df['rating_id'] = rating_id
 
-            df.rename(columns={'TEAM_ID':'team_id',
-                               'OPP_ID':'opponent_id',
-                               'PTS':'points_for',
-                               'OPP_PTS':'points_against',
-                               'LOC':'location',
-                               'Date':'date',
-                               'WL':'result',
-                               'NS':'normalized_score'},
+            df.rename(columns={'points':'points_for',
+                               'opponent_points':'points_against'},
                       inplace=True)
 
             # First delete previous entries for this league:
@@ -253,14 +246,8 @@ class RatingSystem:
 
             # scheduled games
             df = pd.concat([t.scheduled for t in self.teams])
-            df = df.loc[:,['TEAM_ID','OPP_ID','LOC','Date']]
+            df = df.loc[:,['team_id','opponent_id','location','date']]
             df['rating_id'] = rating_id
-
-            df.rename(columns={'TEAM_ID':'team_id',
-                               'OPP_ID':'opponent_id',
-                               'LOC':'location',
-                               'Date':'date'},
-                      inplace=True)        
 
             df.to_sql("games", engine, if_exists='append', index=False,
                       dtype = {'team_id': sqlt.Integer,

@@ -20,7 +20,7 @@ class ToyLeagueHyper(unittest.TestCase):
              [4, 1, 8, 'A'],
              [4, 4, 6, 'H'],
              [5, 2, 3, 'H'],
-             [5, 3, 2, 'A']], columns=['GAME_ID', 'TEAM_ID', 'PTS', 'LOC'])
+             [5, 3, 2, 'A']], columns=['game_id', 'team_id', 'points', 'location'])
 
         self.league = ratingbase.League.from_hyper_table(self.raw_df)
         
@@ -66,7 +66,7 @@ class ToyLeagueGames(unittest.TestCase):
              [4, 9, 'H', 2, 2, 'A'],
              [1, 8, 'A', 4, 6, 'H'],
              [2, 3, 'H', 3, 2, 'A']],
-            columns=['TEAM_ID', 'PTS', 'LOC', 'OPP_ID', 'OPP_PTS', 'OPP_LOC'])
+            columns=['team_id', 'points', 'location', 'opponent_id', 'opponent_points', 'opponent_location'])
 
         self.league = ratingbase.League.from_games_table(self.raw_df)
         
@@ -114,7 +114,7 @@ class ToyLeagueScheduled(unittest.TestCase):
              [1, np.nan, 'H', 2, np.nan, 'A'],
              [3, np.nan, 'H', 4, np.nan, 'A'],
              [2, np.nan, 'H', 4, np.nan, 'A']],
-            columns=['TEAM_ID', 'PTS', 'LOC', 'OPP_ID', 'OPP_PTS', 'OPP_LOC'])
+            columns=['team_id', 'points', 'location', 'opponent_id', 'opponent_points', 'opponent_location'])
 
         self.league = ratingbase.League.from_games_table(self.raw_df)
 
@@ -142,7 +142,7 @@ class ErrorTest(unittest.TestCase):
              [4, 1, 8, 'A'],
              [4, 4, 6, 'H'],
              [5, 2, 3, 'H'],
-             [6, 3, 2, 'A']], columns=['GAME_ID', 'TEAM_ID', 'PTS', 'LOC'])
+             [6, 3, 2, 'A']], columns=['game_id', 'team_id', 'points', 'location'])
 
         with self.assertRaises(ValueError):
             self.league = ratingbase.League.from_hyper_table(self.raw_df)

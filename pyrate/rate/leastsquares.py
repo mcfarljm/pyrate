@@ -25,10 +25,10 @@ class LeastSquares(RatingSystem):
         ratings = np.zeros(neq)
         for i, team in enumerate(self.teams):
             for game_id, game in team.games.iterrows():
-                if not game['TRAIN']:
+                if not game['train']:
                     continue
-                XX[i,game['OPP_IDX']] -= 1.0
-                points = game['PTS'] - game['OPP_PTS']
+                XX[i,game['opponent_index']] -= 1.0
+                points = game['points'] - game['opponent_points']
                 if self.score_cap is not None:
                     points = np.sign(points) * min(self.score_cap, abs(points)) # Truncates
                 # Store "Game Outcome Measure":
@@ -37,15 +37,15 @@ class LeastSquares(RatingSystem):
 
                 # Note: this assumes symmetry between home/away
                 if self.homecourt:
-                    if game['LOC'] == 'H': # Home game
+                    if game['location'] == 'H': # Home game
                         XX[i,-1] += 1.0
                         # Home totals:
                         XX[-1,-1] += 1.0
                         ratings[-1] += points
-                    elif game['LOC'] == 'A': # Away game
+                    elif game['location'] == 'A': # Away game
                         XX[i,-1] -= 1.0
 
-            XX[i,i] = sum(self.teams[i].games['TRAIN'])
+            XX[i,i] = sum(self.teams[i].games['train'])
             #print('team {} games: {}'.format(i, XX[i,i]))
 
         # Replace last team equation to force sum(ratings)=0:
@@ -58,21 +58,21 @@ class LeastSquares(RatingSystem):
         # much was "earned" for each game.
         for team in self.teams:
             for game_id, game in team.games.iterrows():
-                if not game['TRAIN']:
+                if not game['train']:
                     continue
-                opp_rating = ratings[game['OPP_IDX']]
-                team.games.loc[game_id,'NS'] = game['GOM'] + opp_rating
+                opp_rating = ratings[game['opponent_index']]
+                team.games.loc[game_id,'normalized_score'] = game['GOM'] + opp_rating
                 if self.homecourt:
                     # Including home advantage in the normalized score is
                     # consistent with the rating being equal to the mean
                     # of the normalized scores.
-                    loc = loc_map[game['LOC']] # numerical value
-                    team.games.loc[game_id,'NS'] -= loc*ratings[-1]
+                    loc = loc_map[game['location']] # numerical value
+                    team.games.loc[game_id,'normalized_score'] -= loc*ratings[-1]
 
         # Estimate residual standard deviation, which can be used in
         # probability calculations
-        SS = sum([sum(t.games.loc[t.games['TRAIN'],'NS']**2) for t in self.teams]) / 2.0 # Divide by two b/c each game counted twice
-        count = sum([sum(t.games['TRAIN']) for t in self.teams]) / 2
+        SS = sum([sum(t.games.loc[t.games['train'],'normalized_score']**2) for t in self.teams]) / 2.0 # Divide by two b/c each game counted twice
+        count = sum([sum(t.games['train']) for t in self.teams]) / 2
         self.sigma = np.sqrt(SS/count)
 
         if self.homecourt:
