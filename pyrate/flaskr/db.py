@@ -5,8 +5,6 @@ import sqlalchemy
 from flask import current_app, g, url_for
 from flask.cli import with_appcontext
 
-from pyrate.rate.team import fill_win_loss
-
 
 def get_db():
     if 'db' not in g:
@@ -28,98 +26,115 @@ def date_updated():
     date = pd.to_datetime(output.fetchone()[0])
     return date
 
-def get_leagues():
-    """Return list of available leagues"""
+def get_rating_systems():
+    """Return list of rating system names"""
     db = get_db()
-    df = pd.read_sql_table('leagues', db)
-    return df['Name'].values
+    df = pd.read_sql_table('ratings', db)
+    return df['name'].values
 
-def add_link(m, league):
+def add_link(m, rating):
     """Replace team name with link"""
     t = m.group(0)
-    url = url_for('team_page', league=league, team=t)
+    url = url_for('team_page', rating=rating, team=t)
     return '<a href="{url}">{team}</a>'.format(url=url, team=t)
 
-def get_teams_table(league):
+def get_rating_table(rating):
     db = get_db()
 
-    query = """SELECT t.rank, t.NAME, t.rating, t.WINS, t.LOSSES, t.SoS FROM teams t
-    WHERE t.LEAGUE_ID IN (SELECT l.LEAGUE_ID FROM leagues l WHERE l.Name = ?);"""
-    df = pd.read_sql_query(query, db, params=[league])
-    df.rename(columns={'NAME':'Team', 'rank': 'Rank', 'rating': 'Rating', 'WINS':'W', 'LOSSES':'L'}, inplace=True)
+    query = """
+    SELECT t.rank, t.name, t.rating, t.wins, t.losses, t.strength_of_schedule
+    FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
+    WHERE r.name = ?;"""
 
-    func = lambda m: add_link(m, league)
+    df = pd.read_sql_query(query, db, params=[rating])
+    df.rename(columns={'name':'Team',
+                       'rank': 'Rank',
+                       'rating': 'Rating',
+                       'wins':'W',
+                       'losses':'L',
+                       'strength_of_schedule':'SoS'},
+              inplace=True)    
+
+    func = lambda m: add_link(m, rating)
     df['Team'] = df['Team'].str.replace('(.+)',func)
     
     df.sort_values(by='Rating', ascending=False, inplace=True)
     return df
 
-def get_team_id(league, team_name):
-    # Todo: is there a better way of doing queries instead of looking
-    # up team_id each time?
+def get_team_id(rating, team_name):
     db = get_db()
 
     conn = db.connect()
-    output = db.execute("""SELECT t.TEAM_ID FROM teams t INNER JOIN leagues l ON t.LEAGUE_ID = l.LEAGUE_ID
-    WHERE t.NAME = ? AND l.Name = ?;""", (team_name, league))
+    output = db.execute("""
+    SELECT t.team_id
+    FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
+    WHERE t.name = ? AND r.name = ?;""", (team_name, rating))
 
     team_id = output.fetchone()[0]
     return team_id
 
-def get_team_data(league, team_id):
+def get_team_data(rating, team_id):
     db = get_db()
 
-    query = """SELECT t.rank, t.rating, t.WINS, t.LOSSES, t.SoS FROM teams t INNER JOIN leagues l ON t.LEAGUE_ID = l.LEAGUE_ID
-    WHERE t.TEAM_ID = ? AND l.Name = ?;"""
+    query = """
+    SELECT t.rank, t.rating, t.wins, t.losses, t.strength_of_schedule
+    FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
+    WHERE t.team_id = ? AND r.name = ?;"""
     with db.connect() as conn:
-        output = conn.execute(query, (team_id, league))
-        result = output.fetchone()
+        output = conn.execute(query, (team_id, rating))
+        result = output.fetchone()    
+
     return result
 
-def get_games_table(league, team_id):
+def get_games_table(rating, team_id):
     db = get_db()
 
-    query = """SELECT g.Date, g.LOC, t.name, t.rank, g.PTS, g.OPP_PTS, g.NS FROM 
-    games g INNER JOIN leagues l on g.LEAGUE_ID = l.LEAGUE_ID
-    INNER JOIN teams t ON g.OPP_ID = t.TEAM_ID
-    WHERE l.Name = ? AND g.TEAM_ID = ? AND g.PTS IS NOT NULL AND t.LEAGUE_ID = l.LEAGUE_ID;"""    
+    query = """
+    SELECT g.date, g.location, t.name, t.rank, g.result, g.points_for, g.points_against, g.normalized_score
+    FROM games g INNER JOIN teams t ON g.opponent_id = t.team_id
+    INNER JOIN ratings r ON g.rating_id = r.rating_id
+    WHERE r.name = ? and g.team_id = ? AND t.rating_id = r.rating_id AND g.result IS NOT NULL;
+    """
 
-    df = pd.read_sql_query(query, db, params=[league, team_id], parse_dates=['Date'])
+    df = pd.read_sql_query(query, db, params=[rating, team_id], parse_dates=['date'])
 
-    fill_win_loss(df)
-    
-    df.rename(columns={'NAME':'Opponent',
-                       'LOC':'Loc',
+    df.rename(columns={'name':'Opponent',
+                       'location':'Loc',
+                       'date':'Date',
                        'rank':'OR',
-                       'PTS':'PF',
-                       'WL':'Result',
-                       'OPP_PTS':'PA'}, inplace=True)
+                       'points_for':'PF',
+                       'result':'Result',
+                       'points_against':'PA',
+                       'normalized_score':'NS'},
+              inplace=True)
 
-    # Reorder (to move Result)
-    df = df[['Date','Loc','Opponent','OR','Result','PF','PA','NS']]
+    df.sort_values(by='Date', inplace=True)
 
-    func = lambda m: add_link(m, league)
+    func = lambda m: add_link(m, rating)
     df['Opponent'] = df['Opponent'].str.replace('(.+)', func)
     
     return df
 
-def get_scheduled_games(league, team_id):
+def get_scheduled_games(rating, team_id):
     db = get_db()
 
-    query = """SELECT g.Date, g.LOC, t.name, t.rank FROM 
-    games g INNER JOIN leagues l on g.LEAGUE_ID = l.LEAGUE_ID
-    INNER JOIN teams t ON g.OPP_ID = t.TEAM_ID
-    WHERE l.Name = ? AND g.TEAM_ID = ? AND g.PTS IS NULL AND t.LEAGUE_ID = l.LEAGUE_ID;"""    
-    
-    df = pd.read_sql_query(query, db, params=[league, team_id], parse_dates=['Date'])
+    query = """
+    SELECT g.date, g.location, t.name, t.rank
+    FROM games g INNER JOIN teams t ON g.opponent_id = t.team_id
+    INNER JOIN ratings r ON g.rating_id = r.rating_id
+    WHERE r.name = ? and g.team_id = ? AND t.rating_id = r.rating_id AND g.result IS NULL;
+    """    
 
-    df.rename(columns={'NAME':'Opponent',
-                       'LOC':'Loc',
+    df = pd.read_sql_query(query, db, params=[rating, team_id], parse_dates=['date'])
+
+    df.rename(columns={'name':'Opponent',
+                       'location':'Loc',
+                       'date':'Date',
                        'rank':'OR'}, inplace=True)
 
     df.sort_values(by='Date', inplace=True)
 
-    func = lambda m: add_link(m, league)
+    func = lambda m: add_link(m, rating)
     df['Opponent'] = df['Opponent'].str.replace('(.+)', func)
     
     return df

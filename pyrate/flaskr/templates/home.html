@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Ratings{% endblock %}
+{% block content %}
+
+<p>Updated: {{ updated }}</p>
+
+<p>Leagues:</p>
+
+<ul>
+  {% for rating in ratings %}
+  <li><a href="{{ url_for('rating_system', rating=rating ) }}">{{ rating }}</a></li>
+  {% endfor %}
+</ul>
+
+{% endblock %}

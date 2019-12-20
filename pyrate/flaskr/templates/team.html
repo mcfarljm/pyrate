@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ team }}{% endblock %}
 {% block content %}
-<h3>{{ team }} ({{ team_data['WINS'] }}-{{ team_data['LOSSES'] }})</h3>
+<h3>{{ team }} ({{ team_data['wins'] }}-{{ team_data['losses'] }})</h3>
 
 <p>Rank: {{ team_data['rank'] }}</p>
 
-<p><a href="{{ url_for('rankings', league=league ) }}">{{ league }}</a></p>
+<p><a href="{{ url_for('rating_system', rating=rating ) }}">{{ rating }}</a></p>
 
 {{ table|safe }}
 
