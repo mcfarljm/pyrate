@@ -3,6 +3,7 @@ import numpy as np
 import sqlalchemy.types as sqlt
 
 from .team import Team
+from pyrate.db.schema import schema
 
 def rank_array(a, descending=True):
     """Rank array counting from 1"""
@@ -163,7 +164,7 @@ class RatingSystem:
         for i,p in enumerate(pvals):
             print('Coverage for {}: {} / {} ({:.2})'.format(p, correct[i], counts[i], float(correct[i])/counts[i]))
 
-    def to_db(self, engine, league_name):
+    def to_db(self, engine, rating_name):
         """Write to database
 
         Create "teams" and "games" tables.  The "games" table also
@@ -173,87 +174,96 @@ class RatingSystem:
 
         Parameters
         ----------
-        league_name : str
-            A unique name for the league, used to differentiate
-            leagues within the database
+        rating_name : str
+            A unique name for the rating
         """
 
-        ## properties table (general info)
-        today = pd.to_datetime(pd.datetime.today())
-        df = pd.DataFrame({'Updated':[today]})
-        df.to_sql("properties", engine, if_exists='replace', index=False)
+        with engine.connect() as conn:
+            for s in schema.split('\n\n'):
+                conn.execute(s)
 
-        ### leagues table
-        conn = engine.connect()
-        conn.execute('CREATE TABLE IF NOT EXISTS leagues ( LEAGUE_ID INTEGER PRIMARY KEY, Name TEXT UNIQUE, Home_Adv REAL);')
+            ## properties table (general info)
+            today = pd.to_datetime(pd.datetime.today())
+            df = pd.DataFrame({'Updated':[today]})
+            df.to_sql("properties", engine, if_exists='replace', index=False)
 
-        # Check whether league exists:
-        output = conn.execute('SELECT LEAGUE_ID FROM leagues WHERE Name=?', (league_name,))
-        result = output.fetchone()
-        if result:
-            league_id = result[0]
-        else:
-            conn.execute('INSERT INTO leagues (Name) VALUES (?);', (league_name,))
-            output = conn.execute('SELECT last_insert_rowid();')
-            league_id = output.fetchone()[0]
-        if self.homecourt:
-            conn.execute('UPDATE leagues SET Home_Adv = ? WHERE LEAGUE_ID = ?;', (self.home_adv, league_id))
-        
-        ### ratings table
-        team_names = [t.name for t in self.teams]
-        df = self.ratings.copy()
-        df['LEAGUE_ID'] = league_id
-        df['TEAM_ID'] = self.league.team_ids
-        df['WINS'] = [t.wins for t in self.teams]
-        df['LOSSES'] = [t.losses for t in self.teams]
-        df['NAME'] = df.index
+            ### ratings table
+            # Check whether rating exists:
+            output = conn.execute('SELECT rating_id FROM ratings WHERE name=?', (rating_name,))
+            result = output.fetchone()
+            if result:
+                rating_id = result[0]
+            else:
+                conn.execute('INSERT INTO ratings (name) VALUES (?);', (rating_name,))
+                output = conn.execute('SELECT last_insert_rowid();')
+                rating_id = output.fetchone()[0]
+            if self.homecourt:
+                conn.execute('UPDATE ratings SET home_advantage = ? WHERE rating_id = ?;', (self.home_adv, rating_id))
 
-        df.set_index('TEAM_ID', inplace=True)
+            ### teams table
+            team_names = [t.name for t in self.teams]
+            df = self.ratings.copy()
+            df['rating_id'] = rating_id
+            df['team_id'] = self.league.team_ids
+            df['wins'] = [t.wins for t in self.teams]
+            df['losses'] = [t.losses for t in self.teams]
+            df['name'] = df.index
 
-        # First delete previous entries for this league:
-        if _table_exists(conn, 'teams'):
-            conn.execute('DELETE FROM teams WHERE LEAGUE_ID=?;', (league_id,))
+            df.rename(columns={'SoS':'strength_of_schedule'}, inplace=True)
 
-        df.to_sql("teams", engine, if_exists='append', index=True,
-                  dtype = {'TEAM_ID': sqlt.Integer,
-                           'LEAGUE_ID': sqlt.Integer,                           
-                           'NAME': sqlt.Text,
-                           'rating': sqlt.Float,
-                           'rank': sqlt.Integer,
-                           'SoS': sqlt.Float,
-                           'WINS': sqlt.Integer,
-                           'LOSSES': sqlt.Integer})
+            # First delete previous entries for this league:
+            conn.execute('DELETE FROM teams WHERE rating_id=?;', (rating_id,))
 
-        ### games table
-        df = pd.concat([t.games for t in self.teams])
-        df = df.loc[:,['TEAM_ID','OPP_ID','PTS','OPP_PTS','LOC','Date','NS']]
-        df['LEAGUE_ID'] = league_id
+            df.to_sql("teams", engine, if_exists='append', index=False,
+                      dtype = {'team_id': sqlt.Integer,
+                               'rating_id': sqlt.Integer,
+                               'name': sqlt.Text,
+                               'rating': sqlt.Float,
+                               'rank': sqlt.Integer,
+                               'strength_of_schedule': sqlt.Float,
+                               'wins': sqlt.Integer,
+                               'losses': sqlt.Integer})
 
-        # First delete previous entries for this league:
-        if _table_exists(conn, 'games'):
-            conn.execute('DELETE FROM games WHERE LEAGUE_ID=?;', (league_id,))
+            ### games table
+            df = pd.concat([t.games for t in self.teams])
+            df = df.loc[:,['TEAM_ID','OPP_ID','PTS','OPP_PTS','LOC','Date','NS','WL']]
+            df['rating_id'] = rating_id
 
-        df.to_sql("games", engine, if_exists='append', index=False,
-                  dtype = {'TEAM_ID': sqlt.Integer,
-                           'LEAGUE_ID': sqlt.Integer,
-                           'OPP_ID': sqlt.Integer,
-                           'PTS': sqlt.Integer,
-                           'OPP_PTS': sqlt.Integer,
-                           'Date': sqlt.Date,
-                           'NS': sqlt.Float})
+            df.rename(columns={'TEAM_ID':'team_id',
+                               'OPP_ID':'opponent_id',
+                               'PTS':'points_for',
+                               'OPP_PTS':'points_against',
+                               'LOC':'location',
+                               'Date':'date',
+                               'WL':'result',
+                               'NS':'normalized_score'},
+                      inplace=True)
 
-        # scheduled games
-        df = pd.concat([t.scheduled for t in self.teams])
-        df = df.loc[:,['TEAM_ID','OPP_ID','LOC','Date']]
-        df['LEAGUE_ID'] = league_id
+            # First delete previous entries for this league:
+            conn.execute('DELETE FROM games WHERE rating_id=?;', (rating_id,))
 
-        df.to_sql("games", engine, if_exists='append', index=False,
-                  dtype = {'TEAM_ID': sqlt.Integer,
-                           'LEAGUE_ID': sqlt.Integer,
-                           'OPP_ID': sqlt.Integer,
-                           'Date': sqlt.Date})
+            df.to_sql("games", engine, if_exists='append', index=False,
+                      dtype = {'team_id': sqlt.Integer,
+                               'rating_id': sqlt.Integer,
+                               'opponent_id': sqlt.Integer,
+                               'points_for': sqlt.Integer,
+                               'points_against': sqlt.Integer,
+                               'date': sqlt.Date,
+                               'normalized_score': sqlt.Float})
 
-def _table_exists(conn, table_name):
-    output = conn.execute('SELECT count(*) FROM sqlite_master WHERE type=? AND name=?;', ('table',table_name,))
-    return output.fetchone()[0]
-    
+            # scheduled games
+            df = pd.concat([t.scheduled for t in self.teams])
+            df = df.loc[:,['TEAM_ID','OPP_ID','LOC','Date']]
+            df['rating_id'] = rating_id
+
+            df.rename(columns={'TEAM_ID':'team_id',
+                               'OPP_ID':'opponent_id',
+                               'LOC':'location',
+                               'Date':'date'},
+                      inplace=True)        
+
+            df.to_sql("games", engine, if_exists='append', index=False,
+                      dtype = {'team_id': sqlt.Integer,
+                               'rating_id': sqlt.Integer,
+                               'opponent_id': sqlt.Integer,
+                               'date': sqlt.Date})
