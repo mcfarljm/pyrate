@@ -33,7 +33,9 @@ def create_app(test_config=None):
         df = db.get_rating_table(rating)
         updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
         fmts = {'Rating': '{:.2f}',
-                'SoS': '{:.2f}'}
+                'SoS(p)': '{:.2f}',
+                'SoS(f)': '{:.2f}',
+                'SoS(a)': '{:.2f}'}
         return render_template('ratings.html', rating=rating, updated=updated, table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').set_uuid('ratingTable').render(escape=False))
 
     @app.route('/<rating>/<team>')

@@ -97,7 +97,9 @@ class RatingSystem:
             team.rating = rating
         
         self.get_strength_of_schedule()
-        sos = [t.sos for t in self.teams]
+        sos_past = [t.sos_past for t in self.teams]
+        sos_future = [t.sos_future for t in self.teams]
+        sos_all = [t.sos_all for t in self.teams]
 
         try:
             index = [t.name for t in self.teams]
@@ -105,7 +107,9 @@ class RatingSystem:
             index = [t.id for t in self.teams]
         self.ratings = pd.DataFrame({'rating': ratings,
                                      'rank': rank_array(ratings),
-                                     'strength_of_schedule': sos},
+                                     'strength_of_schedule_past': sos_past,
+                                     'strength_of_schedule_future': sos_future,
+                                     'strength_of_schedule_all': sos_all},
                                     index=index)
 
     def get_strength_of_schedule(self):
@@ -113,7 +117,9 @@ class RatingSystem:
 
         For now, does not account for home court"""
         for team in self.teams:
-            team.sos = np.mean([self.teams[idx].rating for idx in team.games['opponent_index']])
+            team.sos_past = np.mean([self.teams[idx].rating for idx in team.games['opponent_index']])
+            team.sos_future = np.mean([self.teams[idx].rating for idx in team.scheduled['opponent_index']])
+            team.sos_all = np.mean([self.teams[idx].rating for idx in np.concatenate((team.games['opponent_index'],team.scheduled['opponent_index']))])
 
     def display_ratings(self, n=10):
         print(self.ratings.sort_values(by='rating', ascending=False).head(n))    

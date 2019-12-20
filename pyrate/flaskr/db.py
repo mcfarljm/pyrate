@@ -42,7 +42,7 @@ def get_rating_table(rating):
     db = get_db()
 
     query = """
-    SELECT t.rank, t.name, t.rating, t.wins, t.losses, t.strength_of_schedule
+    SELECT t.rank, t.name, t.rating, t.wins, t.losses, t.strength_of_schedule_past, t.strength_of_schedule_future, t.strength_of_schedule_all
     FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
     WHERE r.name = ?;"""
 
@@ -52,8 +52,10 @@ def get_rating_table(rating):
                        'rating': 'Rating',
                        'wins':'W',
                        'losses':'L',
-                       'strength_of_schedule':'SoS'},
-              inplace=True)    
+                       'strength_of_schedule_past':'SoS(p)',
+                       'strength_of_schedule_future':'SoS(f)',
+                       'strength_of_schedule_all':'SoS(a)'},
+              inplace=True)
 
     func = lambda m: add_link(m, rating)
     df['Team'] = df['Team'].str.replace('(.+)',func)
@@ -77,7 +79,7 @@ def get_team_data(rating, team_id):
     db = get_db()
 
     query = """
-    SELECT t.rank, t.rating, t.wins, t.losses, t.strength_of_schedule
+    SELECT t.rank, t.rating, t.wins, t.losses
     FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
     WHERE t.team_id = ? AND r.name = ?;"""
     with db.connect() as conn:
