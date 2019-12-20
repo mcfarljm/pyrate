@@ -6,13 +6,8 @@
 
 <p>Updated: {{ updated }}</p>
 
-<p>Leagues:</p>
 
-<ul>
-  {% for rating in ratings %}
-  <li><a href="{{ url_for('rating_system', rating=rating ) }}">{{ rating }}</a></li>
-  {% endfor %}
-</ul>
+{{ ratings|safe }}
 
 <p style="font-size: small">Score and schedule data courtesy of: <a href="https://www.masseyratings.com/data">Massey Ratings</a></p>
 

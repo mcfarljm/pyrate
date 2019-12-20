@@ -26,11 +26,25 @@ def date_updated():
     date = pd.to_datetime(output.fetchone()[0])
     return date
 
+def add_rating_link(m):
+    """Replace rating name with link"""
+    r = m.group(0)
+    url = url_for('rating_system', rating=r)
+    return '<a href="{url}">{rating}</a>'.format(url=url, rating=r)
+
 def get_rating_systems():
     """Return list of rating system names"""
     db = get_db()
     df = pd.read_sql_table('ratings', db)
-    return df['name'].values
+
+    df['name'] = df['name'].str.replace('(.+)', add_rating_link)
+
+    df.rename(columns={'name':'League',
+                       'home_advantage':'Home Advantage'},
+              inplace=True)
+    df = df[['League','Home Advantage']]
+    
+    return df
 
 def add_link(m, rating):
     """Replace team name with link"""
