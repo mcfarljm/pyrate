@@ -97,14 +97,4 @@ class LeastSquares(RatingSystem):
                 pass # ratings do not include home_adv
         # 1-normcdf(0,mu) = normcdf(mu)
         return normcdf(mu, sigma=self.sigma)
-        
 
-if __name__ == '__main__':
-    import pandas as pd
-    import datetime
-
-    lsq = LeastSquares(datetime.datetime(2018,1,1))
-    lsq.evaluate_predicted_wins(True)
-    ratings = pd.DataFrame({'rating':lsq.ratings}, index=[t.name for t in lsq.teams])
-    ratings = ratings.sort_values(by='rating', ascending=False)
-    
