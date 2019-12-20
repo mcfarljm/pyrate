@@ -199,15 +199,27 @@ class RatingSystem:
             df.to_sql("properties", engine, if_exists='replace', index=False)
 
             ### ratings table
+            # Needs to be handled carefully because previous rating_id
+            # needs to be used to remove associated game/team entries,
+            # but we also need to update the rating if that row
+            # already exists
+            
             # Check whether rating exists:
             output = conn.execute('SELECT rating_id FROM ratings WHERE name=?', (rating_name,))
             result = output.fetchone()
             if result:
                 rating_id = result[0]
             else:
-                conn.execute('INSERT INTO ratings (name, home_advantage, r_squared) VALUES (?,?,?);', (rating_name, self.home_adv, self.Rsquared))
+                conn.execute('INSERT INTO ratings (name) VALUES (?);', (rating_name,))
                 output = conn.execute('SELECT last_insert_rowid();')
                 rating_id = output.fetchone()[0]
+
+            # Now update rating_id with new data.  Re-using the
+            # rating_id prevents the rating_id values from continuuing
+            # to increase (alternatively, could just delete all
+            # rating_id entries from games and teams here and then get
+            # a new arbitrary rating_id before adding the data)
+            conn.execute('UPDATE ratings SET home_advantage = ?, r_squared = ? WHERE rating_id = ?;', (self.home_adv, self.Rsquared, rating_id))
 
             ### teams table
             team_names = [t.name for t in self.teams]
