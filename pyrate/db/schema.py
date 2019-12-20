@@ -1,6 +1,6 @@
 schema = """
 CREATE TABLE IF NOT EXISTS ratings (
-rating_id INTEGER PRIMARY KEY, name TEXT UNIQUE, league TEXT, year TEXT, home_advantage REAL, r_squared REAL, description TEXT );
+rating_id INTEGER PRIMARY KEY, name TEXT UNIQUE, league TEXT, year TEXT, home_advantage REAL, r_squared REAL, consistency REAL, description TEXT );
 
 CREATE TABLE IF NOT EXISTS teams (
 rating_id INTEGER, team_id INTEGER, name TEXT, wins INTEGER, losses INTEGER, rating REAL, rank INTEGER, strength_of_schedule_past REAL, strength_of_schedule_future REAL, strength_of_schedule_all REAL );

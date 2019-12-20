@@ -41,9 +41,10 @@ def get_rating_systems():
 
     df.rename(columns={'name':'League',
                        'home_advantage':'Home Advantage',
-                       'r_squared':'R<sup>2</sup>'},
+                       'r_squared':'R<sup>2</sup>',
+                       'consistency':'Consistency'},
               inplace=True)
-    df = df[['League','Home Advantage','R<sup>2</sup>']]
+    df = df[['League','Home Advantage','R<sup>2</sup>','Consistency']]
     
     return df
 

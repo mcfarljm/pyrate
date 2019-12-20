@@ -27,8 +27,9 @@ def create_app(test_config=None):
         ratings = db.get_rating_systems()
         updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
         fmts = {'Home Advantage':'{:.1f}',
-                'R<sup>2</sup>':'{:.2f}'}
-        return render_template('home.html', updated=updated, ratings=ratings.style.hide_index().format(fmts).set_properties(subset=['Home Advantage'], **{'text-align':'center'}).render(escape=False))
+                'R<sup>2</sup>':'{:.2f}',
+                'Consistency':'{:.2f}',}
+        return render_template('home.html', updated=updated, ratings=ratings.style.hide_index().format(fmts).set_properties(subset=['Home Advantage','Consistency'], **{'text-align':'center'}).render(escape=False))
 
     @app.route('/<rating>')
     def rating_system(rating):
