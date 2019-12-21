@@ -7,6 +7,11 @@
 
 <p><a href="{{ url_for('rating_system', rating=rating ) }}">{{ rating }}</a></p>
 
+<p style="font-size: smaller">Legend: OR = Opponent rank,
+  PF = Points for,
+  PA = Points against,
+  NS = Normalized score (amount "earned")</p>
+
 <p style="font-size: small">Click column name to sort</p>
 
 {{ table|safe }}
