@@ -61,6 +61,7 @@ class Team:
 
         team_ids = list(df['team_id'].unique())
         games['opponent_index'] = games['opponent_id'].apply(lambda x: team_ids.index(x))
+        games['team_index'] = games['team_id'].apply(lambda x: team_ids.index(x))
 
         # For compatibility with Massey data, treat 0 points as
         # scheduled game (could be added as a flag)

@@ -77,55 +77,62 @@ class LeastSquares(RatingSystem):
                     team.games.loc[game_id,'normalized_score'] -= loc*ratings[-1]
                     team.games.loc[game_id,'predicted_GOM'] += loc*ratings[-1]
 
-        # Estimate R-squared and residual standard deviation, which
-        # can be used in probability calculations
-        all_games = pd.concat([t.games for t in self.teams], ignore_index=True)
-        all_games = all_games[all_games['train']]
-        # Each game is represented twice, just choose 1.  (Believe
-        # that this works the same in either "direction", although
-        # e.g., mean(GOM) would not necssarily be the same if using a
-        # score cap.)
-        all_games = all_games[ all_games['team_id'] < all_games['opponent_id'] ]
-        SST = sum( (all_games['GOM'] - np.mean(all_games['GOM']))**2 )
-        residuals = all_games['GOM'] - all_games['predicted_GOM']
-        SSE = sum( (residuals - np.mean(residuals))**2 )
-        self.Rsquared = 1.0 - SSE/SST
-        self.sigma = np.sqrt( SSE / (len(all_games)-1) )
-        
         if self.homecourt:
             self.ratings = ratings[:-1]
             self.home_adv = ratings[-1]
         else:
             self.ratings = ratings
             self.home_adv = None
-
+                    
+        self.store_games()
         self.store_ratings()
+        self.store_predictions()
 
-        # Predict result of past games:
-        def predict_game(row):
-            return self.predict_result(self.teams[self.league.team_ids.index(row['team_id'])], self.teams[row['opponent_index']], row['location'])
-        all_games['prediction'] = all_games.apply(predict_game, axis=1)
-        self.consistency = sum(all_games['prediction']==all_games['result']) / float(len(all_games))
+        # Estimate R-squared and residual standard deviation, which
+        # can be used in probability calculations
+        all_games = self.single_games[self.single_games['train']]
+        # (Note that store_games() arbitrarily puts one version of
+        # each game.  Believe that this works the same in either
+        # "direction", although e.g., mean(GOM) would not necssarily
+        # be the same if using a score cap.)
+        SST = sum( (all_games['GOM'] - np.mean(all_games['GOM']))**2 )
+        residuals = all_games['GOM'] - all_games['predicted_GOM']
+        SSE = sum( (residuals - np.mean(residuals))**2 )
+        self.Rsquared = 1.0 - SSE/SST
+        self.sigma = np.sqrt( SSE / (len(all_games)-1) )
+        
+    def predict_game_outcome_measure(self, games):
+        """Predict GOM for games in DataFrame
 
-    def predict_game_outcome_measure(self, team1, team2, loc_char=None):
-        """Predict game outcome measure for team1 playing team2"""
-        y = team1.rating - team2.rating
-        if self.homecourt and loc_char is not None:
-            y += loc_map[loc_char]
+        Parameters
+        ----------
+        games : DataFrame
+            Contains the following columns: 'team_id', 'opponent_id',
+            and 'location' (optional)
+
+        """
+        # Storing as a series here isn't strictly necessary, but it
+        # retains the indexing of "games" and makes it possible to use
+        # Series operations in subsquent calculations.  Note that we
+        # convert to values first because otherwise we end up with the
+        # indexes from self.ratings, which is not what we want.
+        y = pd.Series(self.ratings.loc[games['team_id'],'rating'].values - self.ratings.loc[games['opponent_id'],'rating'].values, index=games.index)
+        if self.homecourt and 'location' in games:
+            y += games['location'].map(loc_map)
         return y
 
-    def predict_result(self, team1, team2, loc_char=None):
-        """Predict win or loss result for team1 playing team2"""
-        y = self.predict_game_outcome_measure(team1, team2, loc_char)
-        return 'W' if y > 0.0 else 'L'
+    def predict_result(self, games):
+        y = self.predict_game_outcome_measure(games)
+        return y.apply(lambda gom: 'W' if gom > 0.0 else 'L')
 
-    def predict_win_probability(self, team1, team2, loc_char=None):
-        """Predict win probability for team1 over team2
+    def predict_win_probability(self, games):
+        """Predict win probability for each game in DataFrame
 
         For the least squares system, this is based on normally
         distributed residuals
         """
-        mu = self.predict_game_outcome_measure(team1, team2, loc_char)
+        mu = self.predict_game_outcome_measure(games)
         # 1-normcdf(0,mu) = normcdf(mu)
-        return normcdf(mu, sigma=self.sigma)
+        # Todo: use vectorized version of CDF calc (SciPy?)
+        return mu.apply(lambda x: normcdf(x, sigma=self.sigma))
 

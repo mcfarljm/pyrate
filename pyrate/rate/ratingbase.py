@@ -88,8 +88,23 @@ class RatingSystem:
         if self.homecourt:
             print('home advantage: {:.1f}'.format(self.home_adv))
 
+    def store_games(self):
+        """Extract team-by-team game data into league-wide table
+
+        This is done after the ratings are fit, since the fitting
+        process might add attributes to the team game data
+        """
+        # double_games stores each game twice (one with each team in
+        # the first position)
+        self.double_games = pd.concat([t.games for t in self.teams], ignore_index=True)
+        # Each game is represented twice, just choose 1.  (Believe
+        # that this works the same in either "direction", although
+        # e.g., mean(GOM) would not necssarily be the same if using a
+        # score cap.)
+        self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ]
+
     def store_ratings(self):
-        "After child method is called, organize rating data into DataFrame"""
+        """After child method is called, organize rating data into DataFrame"""
         ratings = self.ratings
 
         # Store rating attribute for each team
@@ -101,10 +116,10 @@ class RatingSystem:
         sos_future = [t.sos_future for t in self.teams]
         sos_all = [t.sos_all for t in self.teams]
 
-        try:
-            index = [t.name for t in self.teams]
-        except AttributeError:
-            index = [t.id for t in self.teams]
+        # Note: although for interactive use, indexing by name is
+        # convenient, currently index by id to cover case where names
+        # are not provided (and maybe it provides faster lookup?)
+        index = [t.id for t in self.teams]
         self.ratings = pd.DataFrame({'rating': ratings,
                                      'rank': rank_array(ratings),
                                      'strength_of_schedule_past': sos_past,
@@ -126,28 +141,24 @@ class RatingSystem:
             team.sos_all = np.mean([self.teams[idx].rating for idx in np.concatenate((team.games['opponent_index'],team.scheduled['opponent_index']))])
 
     def display_ratings(self, n=10):
-        print(self.ratings.sort_values(by='rating', ascending=False).head(n))    
+        print(self.ratings.sort_values(by='rating', ascending=False).head(n))
+
+    def store_predictions(self):
+        self.double_games['predicted_result'] = self.predict_result(self.double_games)
+        self.consistency = sum(self.double_games['predicted_result']==self.double_games['result']) / float(len(self.double_games))
 
     def evaluate_predicted_wins(self, exclude_train=False):
         """Evaluate how many past games are predicted correctly"""
-        count = 0
-        correct = 0
-        pred_win_count = 0
-        for team in self.teams:
-            for game_id, game in team.games.iterrows():
-                if exclude_train and game['train']:
-                    continue
-                count += 1
-                pred = self.predict_result(team, self.teams[game['opponent_index']], game['location'])
-                if pred == 'W':
-                    pred_win_count += 1
-                if pred == game['result']:
-                    correct += 1
-        count = count // 2
-        correct = correct // 2
-        if pred_win_count != count:
-            print('Mismatch for predicted win count:', pred_win_count)
-        return correct, count
+        if exclude_train:
+            idx = ~ self.double_games['train']
+        else:
+            # Set idx to all True
+            idx = self.double_games['train'].notnull()
+
+        correct = sum( self.double_games.loc[idx,'predicted_result'] == self.double_games.loc[idx,'result'] ) // 2
+        total = sum(idx) // 2
+
+        return correct, total
 
     def evaluate_coverage_probability(self, exclude_train=False):
         pvals = np.array([0.5, 0.6, 0.7, 0.8, 0.9])
@@ -223,13 +234,12 @@ class RatingSystem:
             conn.execute('UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=?, games_played = ?, games_scheduled = ? WHERE rating_id = ?;', (self.home_adv, self.Rsquared, self.consistency, n_games, n_scheduled, rating_id))
 
             ### teams table
-            team_names = [t.name for t in self.teams]
             df = self.ratings.copy()
             df['rating_id'] = rating_id
-            df['team_id'] = self.league.team_ids
+            df['team_id'] = df.index
             df['wins'] = [t.wins for t in self.teams]
             df['losses'] = [t.losses for t in self.teams]
-            df['name'] = df.index
+            df['name'] = [t.name for t in self.teams]
 
             # First delete previous entries for this league:
             conn.execute('DELETE FROM teams WHERE rating_id=?;', (rating_id,))
@@ -245,8 +255,7 @@ class RatingSystem:
                                'losses': sqlt.Integer})
 
             ### games table
-            df = pd.concat([t.games for t in self.teams])
-            df = df.loc[:,['team_id','opponent_id','points','opponent_points','location','date','normalized_score','result']]
+            df = self.double_games.loc[:,['team_id','opponent_id','points','opponent_points','location','date','normalized_score','result']]
             df['rating_id'] = rating_id
 
             df.rename(columns={'points':'points_for',
