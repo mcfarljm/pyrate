@@ -102,9 +102,9 @@ class LeastSquares(RatingSystem):
         self.store_ratings()
 
         # Predict result of past games:
-        def predidct_game(row):
+        def predict_game(row):
             return self.predict_result(self.teams[self.league.team_ids.index(row['team_id'])], self.teams[row['opponent_index']], row['location'])
-        all_games['prediction'] = all_games.apply(predidct_game, axis=1)
+        all_games['prediction'] = all_games.apply(predict_game, axis=1)
         self.consistency = sum(all_games['prediction']==all_games['result']) / float(len(all_games))
 
     def predict_game_outcome_measure(self, team1, team2, loc_char=None):
