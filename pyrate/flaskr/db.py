@@ -32,10 +32,28 @@ def add_rating_link(m):
     url = url_for('rating_system', rating=r)
     return '<a href="{url}">{rating}</a>'.format(url=url, rating=r)
 
+def get_most_recent_game(rating):
+    """Get date of most recent game played"""
+    db = get_db()
+
+    query = """
+    SELECT g.date
+    FROM games g INNER JOIN ratings r on g.rating_id = r.rating_id
+    WHERE r.name = ? AND g.result IS NOT NULL
+    ORDER by g.date DESC
+    LIMIT 1;"""
+
+    with db.connect() as conn:
+        output = conn.execute(query, (rating,))
+        result = output.fetchone()
+    return result[0]
+
 def get_rating_systems():
     """Return list of rating system names"""
     db = get_db()
     df = pd.read_sql_table('ratings', db)
+
+    df['Through'] = df['name'].apply(get_most_recent_game)
 
     df['name'] = df['name'].str.replace('(.+)', add_rating_link)
 
@@ -46,8 +64,8 @@ def get_rating_systems():
                        'games_played':'GP',
                        'games_scheduled':'GS'},
               inplace=True)
-    df = df[['League','Home Advantage','R<sup>2</sup>','Consistency','GP','GS']]
-    
+    df = df[['League','Through','Home Advantage','R<sup>2</sup>','Consistency','GP','GS']]
+
     return df
 
 def add_link(m, rating):
