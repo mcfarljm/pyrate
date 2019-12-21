@@ -58,7 +58,7 @@ def get_rating_table(rating):
     db = get_db()
 
     query = """
-    SELECT t.rank, t.name, t.rating, t.wins, t.losses, t.strength_of_schedule_past, t.strength_of_schedule_future, t.strength_of_schedule_all
+    SELECT t.rank, t.name, t.rating, t.wins, t.losses, t.strength_of_schedule_past, t.strength_of_schedule_future
     FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
     WHERE r.name = ?;"""
 
