@@ -218,7 +218,9 @@ class RatingSystem:
             # to increase (alternatively, could just delete all
             # rating_id entries from games and teams here and then get
             # a new arbitrary rating_id before adding the data)
-            conn.execute('UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=? WHERE rating_id = ?;', (self.home_adv, self.Rsquared, self.consistency, rating_id))
+            n_games = sum([len(t.games) for t in self.teams]) // 2
+            n_scheduled = sum([len(t.scheduled) for t in self.teams]) // 2
+            conn.execute('UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=?, games_played = ?, games_scheduled = ? WHERE rating_id = ?;', (self.home_adv, self.Rsquared, self.consistency, n_games, n_scheduled, rating_id))
 
             ### teams table
             team_names = [t.name for t in self.teams]
