@@ -138,8 +138,7 @@ class RatingSystem:
                 if exclude_train and game['train']:
                     continue
                 count += 1
-                loc = 1 if game['location']=='H' else -1
-                pred = 'W' if self.predict_win_probability(team, self.teams[game['opponent_index']], loc) > 0.5 else 'L'
+                pred = self.predict_result(team, self.teams[game['opponent_index']], game['location'])
                 if pred == 'W':
                     pred_win_count += 1
                 if pred == game['result']:

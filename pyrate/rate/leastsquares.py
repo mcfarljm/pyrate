@@ -107,25 +107,25 @@ class LeastSquares(RatingSystem):
         all_games['prediction'] = all_games.apply(predidct_game, axis=1)
         self.consistency = sum(all_games['prediction']==all_games['result']) / float(len(all_games))
 
-    def predict_result(self, team1, team2, loc_char=None):
-        """Predict win or loss result for team1 playing team2"""
+    def predict_game_outcome_measure(self, team1, team2, loc_char=None):
+        """Predict game outcome measure for team1 playing team2"""
         y = team1.rating - team2.rating
         if self.homecourt and loc_char is not None:
             y += loc_map[loc_char]
+        return y
+
+    def predict_result(self, team1, team2, loc_char=None):
+        """Predict win or loss result for team1 playing team2"""
+        y = self.predict_game_outcome_measure(team1, team2, loc_char)
         return 'W' if y > 0.0 else 'L'
 
-    def predict_win_probability(self, team1, team2, loc=None):
+    def predict_win_probability(self, team1, team2, loc_char=None):
         """Predict win probability for team1 over team2
 
-        loc: optionally, 1 for home, -1 for away
-
-        For the least squares system, this is based on normally distributed residuals"""
-        mu = team1.rating - team2.rating
-        if self.homecourt and loc is not None:
-            try:
-                mu += loc * self.home_adv
-            except AttributeError:
-                pass # ratings do not include home_adv
+        For the least squares system, this is based on normally
+        distributed residuals
+        """
+        mu = self.predict_game_outcome_measure(team1, team2, loc_char)
         # 1-normcdf(0,mu) = normcdf(mu)
         return normcdf(mu, sigma=self.sigma)
 
