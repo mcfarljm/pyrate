@@ -103,6 +103,9 @@ class RatingSystem:
         # score cap.)
         self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ]
 
+        self.double_schedule = pd.concat([t.scheduled for t in self.teams], ignore_index=True)
+
+
     def store_ratings(self):
         """After child method is called, organize rating data into DataFrame"""
         ratings = self.ratings
@@ -145,6 +148,8 @@ class RatingSystem:
 
     def store_predictions(self):
         self.double_games['predicted_result'] = self.predict_result(self.double_games)
+        self.double_games['win_probability'] = self.predict_win_probability(self.double_games)
+        self.double_schedule['win_probability'] = self.predict_win_probability(self.double_schedule)
         self.consistency = sum(self.double_games['predicted_result']==self.double_games['result']) / float(len(self.double_games))
 
     def evaluate_predicted_wins(self, exclude_train=False):
@@ -255,7 +260,7 @@ class RatingSystem:
                                'losses': sqlt.Integer})
 
             ### games table
-            df = self.double_games.loc[:,['team_id','opponent_id','points','opponent_points','location','date','normalized_score','result']]
+            df = self.double_games.loc[:,['team_id','opponent_id','points','opponent_points','location','date','normalized_score','result','win_probability']]
             df['rating_id'] = rating_id
 
             df.rename(columns={'points':'points_for',
@@ -275,8 +280,7 @@ class RatingSystem:
                                'normalized_score': sqlt.Float})
 
             # scheduled games
-            df = pd.concat([t.scheduled for t in self.teams])
-            df = df.loc[:,['team_id','opponent_id','location','date']]
+            df = self.double_schedule.loc[:,['team_id','opponent_id','location','date','win_probability']]
             df['rating_id'] = rating_id
 
             df.to_sql("games", engine, if_exists='append', index=False,

@@ -51,12 +51,14 @@ def create_app(test_config=None):
 
         fmts = {'Date': lambda x: "{}".format(x.strftime('%Y-%m-%d')),
                 'NS': '{:.0f}'}
+        fmts_sched = fmts.copy() # 'Result' format is different
+        fmts_sched['Result'] = '{:.0f}%'
 
         def color_outcome(s):
             return ['color: green' if v=='W' else 'color: red' for v in s]
 
         games = df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero').set_uuid('gameTable').render(escape=False)
-        scheduled = df_sched.style.hide_index().format(fmts).set_uuid('scheduleTable').render(escape=False)
+        scheduled = df_sched.style.hide_index().format(fmts_sched).set_uuid('scheduleTable').render(escape=False)
         
         return render_template('team.html', rating=rating, team=team, team_data=td, table=games, scheduled=scheduled)
 

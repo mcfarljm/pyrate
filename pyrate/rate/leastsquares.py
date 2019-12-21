@@ -86,7 +86,6 @@ class LeastSquares(RatingSystem):
                     
         self.store_games()
         self.store_ratings()
-        self.store_predictions()
 
         # Estimate R-squared and residual standard deviation, which
         # can be used in probability calculations
@@ -100,6 +99,8 @@ class LeastSquares(RatingSystem):
         SSE = sum( (residuals - np.mean(residuals))**2 )
         self.Rsquared = 1.0 - SSE/SST
         self.sigma = np.sqrt( SSE / (len(all_games)-1) )
+
+        self.store_predictions()
         
     def predict_game_outcome_measure(self, games):
         """Predict GOM for games in DataFrame

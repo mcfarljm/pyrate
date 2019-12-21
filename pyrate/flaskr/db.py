@@ -157,7 +157,7 @@ def get_scheduled_games(rating, team_id):
     db = get_db()
 
     query = """
-    SELECT g.date, g.location, t.name, t.rank
+    SELECT g.date, g.location, t.name, t.rank, g.win_probability
     FROM games g INNER JOIN teams t ON g.opponent_id = t.team_id
     INNER JOIN ratings r ON g.rating_id = r.rating_id
     WHERE r.name = ? and g.team_id = ? AND t.rating_id = r.rating_id AND g.result IS NULL;
@@ -168,7 +168,10 @@ def get_scheduled_games(rating, team_id):
     df.rename(columns={'name':'Opponent',
                        'location':'Loc',
                        'date':'Date',
-                       'rank':'OR'}, inplace=True)
+                       'rank':'OR',
+                       'win_probability':'Result'}, inplace=True)
+
+    df['Result'] *= 100.0 # Probability to percent
 
     df.sort_values(by='Date', inplace=True)
 
