@@ -152,6 +152,11 @@ class RatingSystem:
         self.double_schedule['win_probability'] = self.predict_win_probability(self.double_schedule)
         self.consistency = sum(self.double_games['predicted_result']==self.double_games['result']) / float(len(self.double_games))
 
+        # Expected wins, losses:
+        exp_wins = [int(round(sum(self.double_schedule.loc[self.double_schedule['team_id']==t.id,'win_probability']))) + t.wins for t in self.teams]
+        self.ratings['expected_losses'] = [len(t.games) + len(t.scheduled) - exp_wins[i] for i,t in enumerate(self.teams)]
+        self.ratings['expected_wins'] = exp_wins
+
     def evaluate_predicted_wins(self, exclude_train=False):
         """Evaluate how many past games are predicted correctly"""
         if exclude_train:
@@ -257,7 +262,9 @@ class RatingSystem:
                                'rank': sqlt.Integer,
                                'strength_of_schedule': sqlt.Float,
                                'wins': sqlt.Integer,
-                               'losses': sqlt.Integer})
+                               'losses': sqlt.Integer,
+                               'expected_wins': sqlt.Integer,
+                               'expected_losses': sqlt.Integer})
 
             ### games table
             df = self.double_games.loc[:,['team_id','opponent_id','points','opponent_points','location','date','normalized_score','result','win_probability']]

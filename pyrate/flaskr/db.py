@@ -115,7 +115,7 @@ def get_team_data(rating, team_id):
     db = get_db()
 
     query = """
-    SELECT t.rank, t.rating, t.wins, t.losses
+    SELECT t.rank, t.rating, t.wins, t.losses, t.expected_wins, t.expected_losses
     FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
     WHERE t.team_id = ? AND r.name = ?;"""
     with db.connect() as conn:

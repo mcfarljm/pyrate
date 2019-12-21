@@ -5,6 +5,8 @@
 
 <p>Rank: {{ team_data['rank'] }}</p>
 
+<p>Expected record: {{ team_data['expected_wins'] }}-{{ team_data['expected_losses'] }}</p>
+
 <p><a href="{{ url_for('rating_system', rating=rating ) }}">{{ rating }}</a></p>
 
 <p style="font-size: smaller">Legend: OR = Opponent rank,
