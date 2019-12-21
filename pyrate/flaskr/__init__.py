@@ -49,7 +49,7 @@ def create_app(test_config=None):
 
         td = db.get_team_data(rating, team_id)
 
-        fmts = {'Date': lambda x: "{}".format(x.strftime('%m/%d')),
+        fmts = {'Date': lambda x: "{}".format(x.strftime('%Y-%m-%d')),
                 'NS': '{:.0f}'}
 
         def color_outcome(s):
