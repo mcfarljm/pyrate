@@ -37,7 +37,7 @@ def create_app(test_config=None):
         updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
         fmts = {'Rating': '{:.2f}'}
 
-        if request.args.get('mode') != 'rank':
+        if request.args.get('mode') == 'rating':
             fmts.update({
                 'SoS(p)': '{:.2f}',
                 'SoS(f)': '{:.2f}',

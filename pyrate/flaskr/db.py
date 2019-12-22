@@ -95,12 +95,17 @@ def get_rating_table(rating):
                        'strength_of_schedule_all':'SoS(a)'},
               inplace=True)
 
-    if request.args.get('mode') == 'rank':
+    if request.args.get('mode') != 'rating':
         df['SoS(p)'] = rank_array(df['SoS(p)'].values)
-        # Note: if a Series is passed in, np.argsort (called by
-        # rank_array) will behave differently, returning some -1
-        # values, which interfere with the function)
-        df['SoS(f)'] = rank_array(df['SoS(f)'].values)
+        # Note: originally used custom rank_array implementation that
+        # calls np.argsort, which gets overridden for a series,
+        # causing the custom algorithm not to work.
+        
+        # There is a tradeoff with how to handle missing values.
+        # Without filling, 'nan' will show up in the table, but that
+        # prevents numerical sort from working.  Filling with a
+        # numerical value enables sorting but is still not ideal.
+        df['SoS(f)'] = df['SoS(f)'].rank(ascending=False, method='min').fillna(999)
 
     func = lambda m: add_link(m, rating)
     df['Team'] = df['Team'].str.replace('(.+)',func)
