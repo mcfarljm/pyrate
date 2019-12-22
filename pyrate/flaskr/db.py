@@ -2,8 +2,10 @@ import pandas as pd
 import numpy as np
 import sqlalchemy
 
-from flask import current_app, g, url_for
+from flask import current_app, g, url_for, request
 from flask.cli import with_appcontext
+
+from pyrate.rate.ratingbase import rank_array
 
 
 def get_db():
@@ -92,6 +94,13 @@ def get_rating_table(rating):
                        'strength_of_schedule_future':'SoS(f)',
                        'strength_of_schedule_all':'SoS(a)'},
               inplace=True)
+
+    if request.args.get('mode') == 'rank':
+        df['SoS(p)'] = rank_array(df['SoS(p)'].values)
+        # Note: if a Series is passed in, np.argsort (called by
+        # rank_array) will behave differently, returning some -1
+        # values, which interfere with the function)
+        df['SoS(f)'] = rank_array(df['SoS(f)'].values)
 
     func = lambda m: add_link(m, rating)
     df['Team'] = df['Team'].str.replace('(.+)',func)
