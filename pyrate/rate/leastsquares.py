@@ -98,10 +98,10 @@ class LeastSquares(RatingSystem):
         residuals = all_games['GOM'] - all_games['predicted_GOM']
         SSE = sum(residuals**2)
         self.Rsquared = 1.0 - SSE/SST
-        # DOF: number of observations less model parameters.  Number
-        # of parameters is number of teams plus 1 because one of the
-        # ratings is arbitrary (sets the location)
-        dof = len(all_games) - len(self.teams) + 1
+        # DOF: number of observations less model parameters.  There is
+        # one less parameter than teams because one rating is
+        # arbitrary (sets the location).
+        dof = len(all_games) - (len(self.teams) - 1)
         if self.homecourt:
             dof = dof -1
         self.sigma = np.sqrt( SSE / dof )
