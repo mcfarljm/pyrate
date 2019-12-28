@@ -91,13 +91,12 @@ class LeastSquares(RatingSystem):
         # Estimate R-squared and residual standard deviation, which
         # can be used in probability calculations
         all_games = self.single_games[self.single_games['train']]
-        # (Note that store_games() arbitrarily puts one version of
-        # each game.  Believe that this works the same in either
-        # "direction", although e.g., mean(GOM) would not necssarily
-        # be the same if using a score cap.)
-        SST = sum( (all_games['GOM'] - np.mean(all_games['GOM']))**2 )
+        # Since the model does not include an intercept term, we
+        # compute SST without subtracting the mean of the dependent
+        # variable.
+        SST = sum( all_games['GOM']**2 )
         residuals = all_games['GOM'] - all_games['predicted_GOM']
-        SSE = sum( (residuals - np.mean(residuals))**2 )
+        SSE = sum(residuals**2)
         self.Rsquared = 1.0 - SSE/SST
         # DOF: number of observations less model parameters.  Number
         # of parameters is number of teams plus 1 because one of the
