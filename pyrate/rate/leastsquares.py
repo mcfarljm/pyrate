@@ -1,16 +1,11 @@
 import numpy as np
-import scipy.linalg
 import pandas as pd
-import math
+import scipy.linalg
+import scipy.stats
 
 from .ratingbase import RatingSystem
 
 loc_map = {'H': 1, 'A': -1, 'N': 0}
-
-def normcdf(x, mu=0, sigma=1):
-    """Use np.erf so don't need scipy"""
-    z = (x-mu)/sigma
-    return (1.0 + math.erf(z / np.sqrt(2.0))) / 2.0
 
 class LeastSquares(RatingSystem):
     def __init__(self, league, score_cap=None, homecourt=False):
@@ -35,20 +30,17 @@ class LeastSquares(RatingSystem):
         self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ]
 
         games = self.single_games[self.single_games['train']]
-        ngame = len(games)
 
-        nvar = nteam + 1 if self.homecourt else nteam
+        X, nvar = self.get_basis_matrix(games)
 
-        X = np.zeros((ngame,nvar), dtype='int32')
-        X[np.arange(ngame), games['team_index']] = 1
-        X[np.arange(ngame), games['opponent_index']] = -1
-        # One rating is redundant, so assume rating of last team is 0
-        X = np.delete(X, nteam-1, axis=1)
-
-        if self.homecourt:
-            X[:,-1] = games['location'].map(loc_map)
-
-        ratings = scipy.linalg.lapack.dgels(X, games['GOM'])[1][:nvar-1]
+        lqr,ratings,info = scipy.linalg.lapack.dgels(X, games['GOM'])
+        ratings = ratings[:nvar-1]
+        self.XXinv = lqr[:nvar-1,:]
+        self.XXinv,info = scipy.linalg.lapack.dpotri(self.XXinv,lower=0,overwrite_c=1)
+        # Copy upper to lower triangle
+        i_lower = np.tril_indices(len(self.XXinv), -1)
+        self.XXinv[i_lower] = self.XXinv.T[i_lower]        
+        # Now have inv(XX')
 
         residuals = games['GOM'] - np.dot(X, ratings)
 
@@ -84,7 +76,23 @@ class LeastSquares(RatingSystem):
 
         self.store_ratings()
         self.store_predictions()
-        
+
+    def get_basis_matrix(self, games):
+        nteam = len(self.teams)
+        ngame = len(games)
+        nvar = nteam + 1 if self.homecourt else nteam
+
+        X = np.zeros((ngame,nvar), dtype='int32')
+        X[np.arange(ngame), games['team_index']] = 1
+        X[np.arange(ngame), games['opponent_index']] = -1
+        # One rating is redundant, so assume rating of last team is 0
+        X = np.delete(X, nteam-1, axis=1)
+
+        if self.homecourt:
+            X[:,-1] = games['location'].map(loc_map)
+
+        return X, nvar
+
     def predict_game_outcome_measure(self, games):
         """Predict GOM for games in DataFrame
 
@@ -112,11 +120,20 @@ class LeastSquares(RatingSystem):
     def predict_win_probability(self, games):
         """Predict win probability for each game in DataFrame
 
-        For the least squares system, this is based on normally
-        distributed residuals
+        For the least squares system, this is based on the predictive
+        distribution (accounts for rating parameter uncertainty and
+        residual variation in game outcome), but using a normal
+        distribution instead of t distribution.
+
         """
         mu = self.predict_game_outcome_measure(games)
+
+        # Get terms that account for parameter uncertainty:
+        X, _ = self.get_basis_matrix(games)
+        var_terms = np.array([np.dot(np.dot(x, self.XXinv), x) for x in X])
+        
+        sigma = np.sqrt(self.sigma**2 * (1.0 + var_terms))
+
         # 1-normcdf(0,mu) = normcdf(mu)
-        # Todo: use vectorized version of CDF calc (SciPy?)
-        return mu.apply(lambda x: normcdf(x, sigma=self.sigma))
+        return scipy.stats.norm.cdf(mu, scale=sigma)
 
