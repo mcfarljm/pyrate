@@ -80,6 +80,12 @@ class RatingSystem:
         except AttributeError:
             pass
 
+        # The double_games table may be modified by the fitting
+        # routine, so we let the fitting routine store single_games
+        # once that is done.
+        self.double_games = pd.concat([t.games for t in self.teams], ignore_index=True)
+        self.double_schedule = pd.concat([t.scheduled for t in self.teams], ignore_index=True)
+
     def summarize(self):
         print('{} played games'.format(sum([len(t.games) for t in self.teams])//2))
         num_sched = sum([len(t.scheduled) for t in self.teams])//2
@@ -87,24 +93,6 @@ class RatingSystem:
             print('{} scheduled games'.format(num_sched))
         if self.homecourt:
             print('home advantage: {:.1f}'.format(self.home_adv))
-
-    def store_games(self):
-        """Extract team-by-team game data into league-wide table
-
-        This is done after the ratings are fit, since the fitting
-        process might add attributes to the team game data
-        """
-        # double_games stores each game twice (one with each team in
-        # the first position)
-        self.double_games = pd.concat([t.games for t in self.teams], ignore_index=True)
-        # Each game is represented twice, just choose 1.  (Believe
-        # that this works the same in either "direction", although
-        # e.g., mean(GOM) would not necssarily be the same if using a
-        # score cap.)
-        self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ]
-
-        self.double_schedule = pd.concat([t.scheduled for t in self.teams], ignore_index=True)
-
 
     def store_ratings(self):
         """After child method is called, organize rating data into DataFrame"""

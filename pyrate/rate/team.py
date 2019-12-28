@@ -114,6 +114,8 @@ class Team:
 
         team_ids = list(np.unique(np.concatenate((df['team_id'], df['opponent_id']))))
         games['opponent_index'] = games['opponent_id'].apply(lambda x: team_ids.index(x))
+        games['team_index'] = games['team_id'].apply(lambda x: team_ids.index(x))
+
         fill_win_loss(games)
         return cls(team_id, games)
 

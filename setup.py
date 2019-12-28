@@ -8,6 +8,7 @@ setup(name='pyrate',
       packages=find_packages(),
       install_requires=[
           'numpy',
+          'scipy',
           'pandas',
           'sqlalchemy',
           'flask'

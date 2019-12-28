@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.linalg
 import pandas as pd
 import math
 
@@ -21,91 +22,67 @@ class LeastSquares(RatingSystem):
 
     def fit_ratings(self):
         nteam = len(self.teams)
-        neq = nteam+1 if self.homecourt else nteam
-        XX = np.zeros((neq, neq))
-        ratings = np.zeros(neq)
-        for i, team in enumerate(self.teams):
-            for game_id, game in team.games.iterrows():
-                if not game['train']:
-                    continue
-                XX[i,game['opponent_index']] -= 1.0
-                points = game['points'] - game['opponent_points']
-                if self.score_cap is not None:
-                    points = np.sign(points) * min(self.score_cap, abs(points)) # Truncates
-                # Store "Game Outcome Measure":
-                self.teams[i].games.loc[game_id,'GOM'] = points
-                ratings[i] += points
 
-                # Note: this assumes symmetry between home/away
-                if self.homecourt:
-                    if game['location'] == 'H': # Home game
-                        XX[i,-1] += 1.0
-                        # Home totals:
-                        XX[-1,-1] += 1.0
-                        ratings[-1] += points
-                    elif game['location'] == 'A': # Away game
-                        XX[i,-1] -= 1.0
-
-            XX[i,i] = sum(self.teams[i].games['train'])
-            #print('team {} games: {}'.format(i, XX[i,i]))
-
-        if self.homecourt:
-            # Copy the home counts from the last column into the last
-            # row, to make the matrix symmetric
-            XX[-1,:] = XX[:,-1]
-
-        # Replace last team equation to force sum(ratings)=0:
-        XX[nteam-1,:] = 0.0     # Catch the home court column
-        XX[nteam-1,:nteam] = 1.0
-        ratings[nteam-1] = 0.0
-
-        ratings = np.linalg.solve(XX, ratings)
-
-        # Add "Normalized Score" to team data.  This is essentially how
-        # much was "earned" for each game.
-        for iteam, team in enumerate(self.teams):
-            for game_id, game in team.games.iterrows():
-                if not game['train']:
-                    continue
-                opp_rating = ratings[game['opponent_index']]
-                team.games.loc[game_id,'normalized_score'] = game['GOM'] + opp_rating
-                team.games.loc[game_id,'predicted_GOM'] = ratings[iteam] - opp_rating
-                if self.homecourt:
-                    # Including home advantage in the normalized score is
-                    # consistent with the rating being equal to the mean
-                    # of the normalized scores.
-                    loc = loc_map[game['location']] # numerical value
-                    team.games.loc[game_id,'normalized_score'] -= loc*ratings[-1]
-                    team.games.loc[game_id,'predicted_GOM'] += loc*ratings[-1]
-
-        if self.homecourt:
-            self.ratings = ratings[:-1]
-            self.home_adv = ratings[-1]
+        # Need game outcome measure and normalized score to be stored
+        # in double_games.  Compute them directly for simplicity, even
+        # though half of calc's are redundant.
+        points = self.double_games['points'] - self.double_games['opponent_points']
+        if self.score_cap is not None:
+            self.double_games['GOM'] = np.sign(points) * np.fmin(self.score_cap, np.abs(points))
         else:
-            self.ratings = ratings
+            self.double_games['GOM'] = points
+
+        self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ]
+
+        games = self.single_games[self.single_games['train']]
+        ngame = len(games)
+
+        nvar = nteam + 1 if self.homecourt else nteam
+
+        X = np.zeros((ngame,nvar), dtype='int32')
+        X[np.arange(ngame), games['team_index']] = 1
+        X[np.arange(ngame), games['opponent_index']] = -1
+        # One rating is redundant, so assume rating of last team is 0
+        X = np.delete(X, nteam-1, axis=1)
+
+        if self.homecourt:
+            X[:,-1] = games['location'].map(loc_map)
+
+        ratings = scipy.linalg.lapack.dgels(X, games['GOM'])[1][:nvar-1]
+
+        residuals = games['GOM'] - np.dot(X, ratings)
+
+        if self.homecourt:
+            self.home_adv = ratings[-1]
+            ratings = np.delete(ratings, -1)
+        else:
             self.home_adv = None
-                    
-        self.store_games()
-        self.store_ratings()
+
+        ratings = np.append(ratings, 0) # Add 0 rating for last team
+        ratings -= np.mean(ratings) # Renormalize
+        self.ratings = ratings
+
+        # Store normalized score:
+        self.double_games['normalized_score'] = self.double_games['GOM'] + ratings[self.double_games['opponent_index']]
+        if self.homecourt:
+            self.double_games['normalized_score'] -= self.double_games['location'].map(loc_map) * self.home_adv
 
         # Estimate R-squared and residual standard deviation, which
-        # can be used in probability calculations
-        all_games = self.single_games[self.single_games['train']]
-        # Since the model does not include an intercept term, we
-        # compute SST without subtracting the mean of the dependent
-        # variable.
-        SST = sum( all_games['GOM']**2 )
-        residuals = all_games['GOM'] - all_games['predicted_GOM']
+        # can be used in probability calculations.  Since the model
+        # does not include an intercept term, we compute SST without
+        # subtracting the mean of the dependent variable.
+        SST = sum( games['GOM']**2 )
         SSE = sum(residuals**2)
         self.Rsquared = 1.0 - SSE/SST
         # DOF: number of observations less model parameters.  There is
         # one less parameter than teams because one rating is
         # arbitrary (sets the location).
-        dof = len(all_games) - (len(self.teams) - 1)
+        dof = len(games) - (len(self.teams) - 1)
         if self.homecourt:
             dof = dof -1
         self.sigma = np.sqrt( SSE / dof )
 
+        self.store_ratings()
         self.store_predictions()
         
     def predict_game_outcome_measure(self, games):
