@@ -55,6 +55,7 @@ class LeastSquares(RatingSystem):
             XX[-1,:] = XX[:,-1]
 
         # Replace last team equation to force sum(ratings)=0:
+        XX[nteam-1,:] = 0.0     # Catch the home court column
         XX[nteam-1,:nteam] = 1.0
         ratings[nteam-1] = 0.0
 

@@ -37,7 +37,7 @@ class ToyLeagueHyper(unittest.TestCase):
             self.assertAlmostEqual(team.rating, expected_rating)
 
     def testHomeCourt(self):
-        expected_ratings = [2.0277777777, -2.5, -1.47222222222, 0.5555555555]
+        expected_ratings = [2.375, -2.15277778, -1.125, 0.90277778]
         lsq = leastsquares.LeastSquares(self.league, homecourt=True)
         for team, expected_rating in zip(lsq.teams, expected_ratings):
             self.assertAlmostEqual(team.rating, expected_rating)
@@ -83,7 +83,7 @@ class ToyLeagueGames(unittest.TestCase):
             self.assertAlmostEqual(team.rating, expected_rating)
 
     def testHomeCourt(self):
-        expected_ratings = [2.0277777777, -2.5, -1.47222222222, 0.5555555555]
+        expected_ratings = [2.375, -2.15277778, -1.125, 0.90277778]
         lsq = leastsquares.LeastSquares(self.league, homecourt=True)
         for team, expected_rating in zip(lsq.teams, expected_ratings):
             self.assertAlmostEqual(team.rating, expected_rating)
