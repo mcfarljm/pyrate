@@ -4,14 +4,28 @@ import scipy.linalg
 import scipy.stats
 
 from .ratingbase import RatingSystem
+from . import gom
 
 loc_map = {'H': 1, 'A': -1, 'N': 0}
 
 class LeastSquares(RatingSystem):
-    def __init__(self, league, score_cap=None, homecourt=False):
+    def __init__(self, league, game_outcome_measure=None, homecourt=False):
+        """
+        Parameters
+        ----------
+        game_outcome_measure : callable
+            Callable that accepts an array of point differences and
+            returns corresponding array of game outcome measures.  May
+            be an instance of a GameOutcomeMeasure subclass.
+        homecourt : bool
+           Whether to account for homecourt advantage
+        """
         super().__init__(league)
-        self.score_cap = score_cap
         self.homecourt = homecourt
+        if game_outcome_measure is None:
+            self.gom = gom.PointDifference()
+        else:
+            self.gom = game_outcome_measure
 
         self.fit_ratings()
 
@@ -22,10 +36,7 @@ class LeastSquares(RatingSystem):
         # in double_games.  Compute them directly for simplicity, even
         # though half of calc's are redundant.
         points = self.double_games['points'] - self.double_games['opponent_points']
-        if self.score_cap is not None:
-            self.double_games['GOM'] = np.sign(points) * np.fmin(self.score_cap, np.abs(points))
-        else:
-            self.double_games['GOM'] = points
+        self.double_games['GOM'] = self.gom(points)
 
         self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ]
 

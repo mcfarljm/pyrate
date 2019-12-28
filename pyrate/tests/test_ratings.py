@@ -4,6 +4,7 @@ import numpy as np
 
 from pyrate.rate import ratingbase
 from pyrate.rate import leastsquares
+from pyrate.rate import gom
 
 class ToyLeagueHyper(unittest.TestCase):
 
@@ -32,7 +33,7 @@ class ToyLeagueHyper(unittest.TestCase):
 
     def testScoreCap(self):
         expected_ratings = [0.875, -0.25, -0.625, 0.0]
-        lsq = leastsquares.LeastSquares(self.league, score_cap=1)
+        lsq = leastsquares.LeastSquares(self.league, game_outcome_measure=gom.CappedPointDifference(1))
         for team, expected_rating in zip(lsq.teams, expected_ratings):
             self.assertAlmostEqual(team.rating, expected_rating)
 
@@ -78,7 +79,7 @@ class ToyLeagueGames(unittest.TestCase):
 
     def testScoreCap(self):
         expected_ratings = [0.875, -0.25, -0.625, 0.0]
-        lsq = leastsquares.LeastSquares(self.league, score_cap=1)
+        lsq = leastsquares.LeastSquares(self.league, game_outcome_measure=gom.CappedPointDifference(1))
         for team, expected_rating in zip(lsq.teams, expected_ratings):
             self.assertAlmostEqual(team.rating, expected_rating)
 
