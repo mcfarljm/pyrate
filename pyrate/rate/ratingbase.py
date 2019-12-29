@@ -15,66 +15,88 @@ def rank_array(a, descending=True):
     return ranks
 
 class League:
-    def __init__(self, teams, team_names=None):
+    def __init__(self, df_games, df_teams=None, duplicated_games=True):
         """Create League instance
 
         Parameters
         ----------
-        team_names: dict-like
-            maps team id to name
+        df_games : DataFrame
+            DataFrame containing at least columns 'team_id',
+            'opponent_id', 'points', and 'opponent_points'
+        df_teams : DataFrame
+            DataFrame containing at least an index of team id's.
+        duplicated_games : bool
+            Whether each game is represented twice, once for each team
         """
-        self.teams = teams
-        self.team_ids = [team.id for team in teams]
-        if team_names is not None:
-            for team in teams:
-                team.name = team_names[team.id]
-                team.games['opponent'] = team.games['opponent_id'].map(team_names)
-            self.team_dict = {t.name: t for t in teams}
-        for team in self.teams:
-            team.games['train'] = True
+        if 'team_id' not in df_games:
+            raise ValueError("expected 'team_id' column")
+        elif 'points' not in df_games:
+            raise ValueError("expected 'points' column")
+        elif 'opponent_id' not in df_games:
+            raise ValueError("expected 'opponent_id' column")
+        elif 'opponent_points' not in df_games:
+            raise ValueError("expected 'opponent_points' column")        
+        
+        if df_teams is None:
+            self.teams = pd.DataFrame(index=games['team_id'].unique())
+        else:
+            self.teams = df_teams
+
+        if not duplicated_games:
+            df2 = df_games.rename(columns={'team_id':'opponent_id', 'opponent_id':'team_id',
+                                           'points':'opponent_points','opponent_points':'points',
+                                           'location':'opponent_location','opponent_location':'location'})
+            df_games = pd.concat((df_games,df2))
+            
+
+        # Split up into games and schedule
+        unplayed = (df_games['points'].isnull() | df_games['opponent_points'].isnull())
+        self.double_games = df_games[~unplayed].copy()
+        self.double_scheduled = df_games[unplayed].copy()
+        self.double_games = self.doublegames.astype({'points':'int32', 'opponent_points':'int32'})
+        self.double_games['train'] = True
+        
 
     @classmethod
-    def from_hyper_table(cls, df, team_names=None):
+    def from_hyper_table(cls, df_games, df_teams=None):
         """Set up league from hyper table format
 
         Parameters
         ----------
-        df : pandas Data frame
+        df_games : pandas Data frame
             A data frame with league data, containing at least the
             following columns: 'game_id', 'team_id', 'points'.
             Optional columns are 'date', 'location' (1 for home, -1
             for away, 0 for neutral).
         """
-        team_ids = df['team_id'].unique()
-        teams = [Team.from_hyper_table(df, id) for id in team_ids]
-        return cls(teams, team_names=team_names)
+        if 'team_id' not in df_games:
+            raise ValueError("expected 'team_id' column")
+        elif 'game_id' not in df_games:
+            raise ValueError("expected 'game_id' column")
+        elif 'points' not in df_games:
+            raise ValueError("expected 'points' column")        
 
-    @classmethod
-    def from_games_table(cls, df, team_names=None):
-        """Set up league from games table format
+        games = df_games.set_index('game_id')
+        games = games.join(games, rsuffix='2')
+        # Each index was originally represented twice, so after join
+        # now appears 4 times, 2 combinations of which are not valid
+        games = games[games['team_id'] != games['team_id2']]
+        # Now have double-games format; rename the columns
+        games = games.rename(columns={'team_id2':'opponent_id',
+                                      'points2':'opponent_points',
+                                      'location2':'opponent_location'})
+        
+        # For compatibility with Massey data, treat 0 points as
+        # scheduled game (could be added as a flag)
+        scheduled = (games['points'] == 0) & (games['opponent_points'] == 0)
+        games.loc[scheduled,['points','opponent_points']] = np.nan # Flag scheduled games
 
-        Parameters
-        ----------
-        df : pandas Data frame
-            A data frame with league data, containing at least the
-            following columns: 'team_id', 'points', 'opponent_id',
-            'opponent_points'.  Optional columns are 'date',
-            'location', and 'opponent_location' (1 for home, -1 for
-            away, 0 for neutral).
-        """
-        team_ids = np.unique(np.concatenate((df['team_id'], df['opponent_id'])))
-        teams = [Team.from_games_table(df, id) for id in team_ids]
-        return cls(teams, team_names=team_names)
+        return cls(games, df_teams)
 
 
 class RatingSystem:
     def __init__(self, league):
         self.league = league
-        self.teams = league.teams
-        try:
-            self.team_dict = league.team_dict
-        except AttributeError:
-            pass
 
         # The double_games table may be modified by the fitting
         # routine, so we let the fitting routine store single_games
