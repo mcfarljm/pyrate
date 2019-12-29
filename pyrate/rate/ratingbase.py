@@ -15,7 +15,7 @@ def rank_array(a, descending=True):
     return ranks
 
 class League:
-    def __init__(self, teams, team_names=None, max_date_train=None):
+    def __init__(self, teams, team_names=None):
         """Create League instance
 
         Parameters
@@ -32,13 +32,9 @@ class League:
             self.team_dict = {t.name: t for t in teams}
         for team in self.teams:
             team.games['train'] = True
-        # if max_date_train is not None:
-        #     for team in self.teams:
-        #         team.set_train_flag_by_date(max_date_train)
-        #     print('Training on {} games'.format(sum([sum(t.games['train']) for t in self.teams]) / 2))
 
     @classmethod
-    def from_hyper_table(cls, df, team_names=None, max_date_train=None):
+    def from_hyper_table(cls, df, team_names=None):
         """Set up league from hyper table format
 
         Parameters
@@ -51,10 +47,10 @@ class League:
         """
         team_ids = df['team_id'].unique()
         teams = [Team.from_hyper_table(df, id) for id in team_ids]
-        return cls(teams, team_names=team_names, max_date_train=max_date_train)
+        return cls(teams, team_names=team_names)
 
     @classmethod
-    def from_games_table(cls, df, team_names=None, max_date_train=None):
+    def from_games_table(cls, df, team_names=None):
         """Set up league from games table format
 
         Parameters
@@ -68,7 +64,7 @@ class League:
         """
         team_ids = np.unique(np.concatenate((df['team_id'], df['opponent_id'])))
         teams = [Team.from_games_table(df, id) for id in team_ids]
-        return cls(teams, team_names=team_names, max_date_train=max_date_train)
+        return cls(teams, team_names=team_names)
 
 
 class RatingSystem:
