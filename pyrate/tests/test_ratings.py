@@ -28,27 +28,27 @@ class ToyLeagueHyper(unittest.TestCase):
     def testLeastSquares(self):
         expected_ratings = [2.375, -2.5, -1.125, 1.25]
         lsq = leastsquares.LeastSquares(self.league)
-        for team, expected_rating in zip(lsq.teams, expected_ratings):
-            self.assertAlmostEqual(team.rating, expected_rating)
+        for rating, expected_rating in zip(lsq.df_teams['rating'], expected_ratings):
+            self.assertAlmostEqual(rating, expected_rating)
 
     def testScoreCap(self):
         expected_ratings = [0.875, -0.25, -0.625, 0.0]
         lsq = leastsquares.LeastSquares(self.league, game_outcome_measure=gom.CappedPointDifference(1))
-        for team, expected_rating in zip(lsq.teams, expected_ratings):
-            self.assertAlmostEqual(team.rating, expected_rating)
+        for rating, expected_rating in zip(lsq.df_teams['rating'], expected_ratings):
+            self.assertAlmostEqual(rating, expected_rating)
 
     def testHomeCourt(self):
         expected_ratings = [2.375, -2.15277778, -1.125, 0.90277778]
         lsq = leastsquares.LeastSquares(self.league, homecourt=True)
-        for team, expected_rating in zip(lsq.teams, expected_ratings):
-            self.assertAlmostEqual(team.rating, expected_rating)
+        for rating, expected_rating in zip(lsq.df_teams['rating'], expected_ratings):
+            self.assertAlmostEqual(rating, expected_rating)
         self.assertAlmostEqual(lsq.home_adv, 1.38888888)
 
     def testStrengtOfSchedule(self):
         expected_sos_vals = [-0.625, 0.83333333, -0.625, -0.416666666]
         lsq = leastsquares.LeastSquares(self.league)
-        for team, expected_sos in zip(lsq.teams, expected_sos_vals):
-            self.assertAlmostEqual(team.sos_past, expected_sos)
+        for sos_past, expected_sos in zip(lsq.df_teams['strength_of_schedule_past'], expected_sos_vals):
+            self.assertAlmostEqual(sos_past, expected_sos)
 
     def testEvaluatePredWins(self):
         lsq = leastsquares.LeastSquares(self.league)
@@ -69,32 +69,32 @@ class ToyLeagueGames(unittest.TestCase):
              [2, 3, 'H', 3, 2, 'A']],
             columns=['team_id', 'points', 'location', 'opponent_id', 'opponent_points', 'opponent_location'])
 
-        self.league = ratingbase.League.from_games_table(self.raw_df)
+        self.league = ratingbase.League(self.raw_df, duplicated_games=False)
         
     def testLeastSquares(self):
         expected_ratings = [2.375, -2.5, -1.125, 1.25]
         lsq = leastsquares.LeastSquares(self.league)
-        for team, expected_rating in zip(lsq.teams, expected_ratings):
-            self.assertAlmostEqual(team.rating, expected_rating)
+        for rating, expected_rating in zip(lsq.df_teams['rating'], expected_ratings):
+            self.assertAlmostEqual(rating, expected_rating)
 
     def testScoreCap(self):
         expected_ratings = [0.875, -0.25, -0.625, 0.0]
         lsq = leastsquares.LeastSquares(self.league, game_outcome_measure=gom.CappedPointDifference(1))
-        for team, expected_rating in zip(lsq.teams, expected_ratings):
-            self.assertAlmostEqual(team.rating, expected_rating)
+        for rating, expected_rating in zip(lsq.df_teams['rating'], expected_ratings):
+            self.assertAlmostEqual(rating, expected_rating)
 
     def testHomeCourt(self):
         expected_ratings = [2.375, -2.15277778, -1.125, 0.90277778]
         lsq = leastsquares.LeastSquares(self.league, homecourt=True)
-        for team, expected_rating in zip(lsq.teams, expected_ratings):
-            self.assertAlmostEqual(team.rating, expected_rating)
+        for rating, expected_rating in zip(lsq.df_teams['rating'], expected_ratings):
+            self.assertAlmostEqual(rating, expected_rating)
         self.assertAlmostEqual(lsq.home_adv, 1.38888888)
 
     def testStrengtOfSchedule(self):
         expected_sos_vals = [-0.625, 0.83333333, -0.625, -0.416666666]
         lsq = leastsquares.LeastSquares(self.league)
-        for team, expected_sos in zip(lsq.teams, expected_sos_vals):
-            self.assertAlmostEqual(team.sos_past, expected_sos)
+        for sos_past, expected_sos in zip(lsq.df_teams['strength_of_schedule_past'], expected_sos_vals):
+            self.assertAlmostEqual(sos_past, expected_sos)
 
     def testEvaluatePredWins(self):
         lsq = leastsquares.LeastSquares(self.league)
@@ -117,18 +117,18 @@ class ToyLeagueScheduled(unittest.TestCase):
              [2, np.nan, 'H', 4, np.nan, 'A']],
             columns=['team_id', 'points', 'location', 'opponent_id', 'opponent_points', 'opponent_location'])
 
-        self.league = ratingbase.League.from_games_table(self.raw_df)
+        self.league = ratingbase.League(self.raw_df, duplicated_games=False)
 
     def testLeastSquares(self):
         expected_ratings = [2.375, -2.5, -1.125, 1.25]
         lsq = leastsquares.LeastSquares(self.league)
-        for team, expected_rating in zip(lsq.teams, expected_ratings):
-            self.assertAlmostEqual(team.rating, expected_rating)
+        for rating, expected_rating in zip(lsq.df_teams['rating'], expected_ratings):
+            self.assertAlmostEqual(rating, expected_rating)
 
     def testSchedule(self):
         expected_scheduled_counts = [1, 2, 1, 2]
-        for team, expected_scheduled_count in zip(self.league.teams, expected_scheduled_counts):
-            self.assertEqual(len(team.scheduled), expected_scheduled_count)
+        for team_id, expected_scheduled_count in zip(self.league.teams.index, expected_scheduled_counts):
+            self.assertEqual(sum(self.league.double_schedule['team_id']==team_id), expected_scheduled_count)
 
 class ErrorTest(unittest.TestCase):
 

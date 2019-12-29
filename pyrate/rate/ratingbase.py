@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import sqlalchemy.types as sqlt
 
-from .team import Team
 from pyrate.db.schema import schema
 
 def rank_array(a, descending=True):
@@ -36,25 +35,46 @@ class League:
             raise ValueError("expected 'opponent_id' column")
         elif 'opponent_points' not in df_games:
             raise ValueError("expected 'opponent_points' column")        
-        
+
+        # Note: although for interactive use, indexing by name is
+        # convenient, currently index by id to cover case where names
+        # are not provided (and maybe it provides faster lookup?)        
         if df_teams is None:
-            self.teams = pd.DataFrame(index=games['team_id'].unique())
+            self.teams = pd.DataFrame(index=np.sort(df_games['team_id'].unique()))
         else:
             self.teams = df_teams
 
+        team_ids = list(self.teams.index)
+        df_games = df_games.copy()
+        df_games['team_index'] = df_games['team_id'].apply(lambda x: team_ids.index(x))            
+        df_games['opponent_index'] = df_games['opponent_id'].apply(lambda x: team_ids.index(x))
+
         if not duplicated_games:
             df2 = df_games.rename(columns={'team_id':'opponent_id', 'opponent_id':'team_id',
+                                           'team_index':'opponent_index', 'opponent_index':'team_index',
                                            'points':'opponent_points','opponent_points':'points',
                                            'location':'opponent_location','opponent_location':'location'})
-            df_games = pd.concat((df_games,df2))
+            df_games = pd.concat((df_games,df2), ignore_index=True, join='inner')
             
 
         # Split up into games and schedule
         unplayed = (df_games['points'].isnull() | df_games['opponent_points'].isnull())
         self.double_games = df_games[~unplayed].copy()
-        self.double_scheduled = df_games[unplayed].copy()
-        self.double_games = self.doublegames.astype({'points':'int32', 'opponent_points':'int32'})
+        self.double_schedule = df_games[unplayed].copy()
+        self.double_games = self.double_games.astype({'points':'int32', 'opponent_points':'int32'})
         self.double_games['train'] = True
+
+        def get_wl(row):
+            if row['points'] > row['opponent_points']:
+                return 'W'
+            elif row['points'] < row['opponent_points']:
+                return 'L'
+            else:
+                return 'T'
+        self.double_games['result'] = self.double_games.apply(get_wl, axis=1)
+
+        self.teams['wins'] = [sum(self.double_games.loc[self.double_games['team_id'] == tid, 'result'] == 'W') for tid in self.teams.index]
+        self.teams['losses'] = [sum(self.double_games['team_id']==tid) - self.teams.at[tid,'wins'] for tid in self.teams.index]
         
 
     @classmethod
@@ -74,7 +94,11 @@ class League:
         elif 'game_id' not in df_games:
             raise ValueError("expected 'game_id' column")
         elif 'points' not in df_games:
-            raise ValueError("expected 'points' column")        
+            raise ValueError("expected 'points' column")
+
+        num_rows = len(df_games)
+        if num_rows % 2 != 0:
+            raise ValueError("expected even number of rows")
 
         games = df_games.set_index('game_id')
         games = games.join(games, rsuffix='2')
@@ -85,6 +109,10 @@ class League:
         games = games.rename(columns={'team_id2':'opponent_id',
                                       'points2':'opponent_points',
                                       'location2':'opponent_location'})
+        if len(games) != num_rows:
+            # If there is a mismatch, game_id's not appearing twice
+            # get dropped by the join
+            raise ValueError("game_id mismatch")
         
         # For compatibility with Massey data, treat 0 points as
         # scheduled game (could be added as a flag)
@@ -96,13 +124,13 @@ class League:
 
 class RatingSystem:
     def __init__(self, league):
-        self.league = league
-
+        self.df_teams = league.teams
         # The double_games table may be modified by the fitting
         # routine, so we let the fitting routine store single_games
         # once that is done.
-        self.double_games = pd.concat([t.games for t in self.teams], ignore_index=True)
-        self.double_schedule = pd.concat([t.scheduled for t in self.teams], ignore_index=True)
+        self.double_games = league.double_games
+        self.double_schedule = league.double_schedule
+        self.single_schedule = self.double_schedule[ self.double_schedule['team_id'] < self.double_schedule['opponent_id'] ]
 
     def summarize(self):
         print('{} played games'.format(sum([len(t.games) for t in self.teams])//2))
@@ -112,42 +140,29 @@ class RatingSystem:
         if self.homecourt:
             print('home advantage: {:.1f}'.format(self.home_adv))
 
-    def store_ratings(self):
+    def store_ratings(self, ratings):
         """After child method is called, organize rating data into DataFrame"""
-        ratings = self.ratings
+        self.df_teams['rating'] = ratings
+        self.df_teams['rank'] = rank_array(ratings)
 
-        # Store rating attribute for each team
-        for rating,team in zip(self.ratings, self.teams):
-            team.rating = rating
-        
         self.get_strength_of_schedule()
-        sos_past = [t.sos_past for t in self.teams]
-        sos_future = [t.sos_future for t in self.teams]
-        sos_all = [t.sos_all for t in self.teams]
-
-        # Note: although for interactive use, indexing by name is
-        # convenient, currently index by id to cover case where names
-        # are not provided (and maybe it provides faster lookup?)
-        index = [t.id for t in self.teams]
-        self.ratings = pd.DataFrame({'rating': ratings,
-                                     'rank': rank_array(ratings),
-                                     'strength_of_schedule_past': sos_past,
-                                     'strength_of_schedule_future': sos_future,
-                                     'strength_of_schedule_all': sos_all},
-                                    index=index)
 
     def get_strength_of_schedule(self):
         """Compute strength of schedule as average of opponent rating
 
         For now, does not account for home court"""
-        for team in self.teams:
-            team.sos_past = np.mean([self.teams[idx].rating for idx in team.games['opponent_index']])
-            if len(team.scheduled) > 0:
-                team.sos_future = np.mean([self.teams[idx].rating for idx in team.scheduled['opponent_index']])
+        self.df_teams['strength_of_schedule_past'] = np.nan
+        self.df_teams['strength_of_schedule_future'] = np.nan
+        self.df_teams['strength_of_schedule_all'] = np.nan
+        for team_id,team in self.df_teams.iterrows():
+            games = self.double_games[self.double_games['team_id'] == team_id]
+            schedule = self.double_schedule[self.double_schedule['team_id'] == team_id]
+            self.df_teams.at[team_id,'strength_of_schedule_past'] = np.mean(self.df_teams.loc[games['opponent_id'],'rating'])
+            if len(schedule) > 0:
+                self.df_teams.at[team_id,'strength_of_schedule_future'] = np.mean(self.df_teams.loc[schedule['opponent_id'],'rating'])
             else:
-                # Prevent warning
-                team.sos_future = np.nan
-            team.sos_all = np.mean([self.teams[idx].rating for idx in np.concatenate((team.games['opponent_index'],team.scheduled['opponent_index']))])
+                self.df_teams.at[team_id,'strength_of_schedule_future'] = np.nan
+            self.df_teams.at[team_id,'strength_of_schedule_all'] = np.mean(self.df_teams.loc[np.concatenate((games['opponent_id'],schedule['opponent_id'])),'rating'])
 
     def display_ratings(self, n=10):
         print(self.ratings.sort_values(by='rating', ascending=False).head(n))
@@ -159,9 +174,10 @@ class RatingSystem:
         self.consistency = sum(self.double_games['predicted_result']==self.double_games['result']) / float(len(self.double_games))
 
         # Expected wins, losses:
-        exp_wins = [int(round(sum(self.double_schedule.loc[self.double_schedule['team_id']==t.id,'win_probability']))) + t.wins for t in self.teams]
-        self.ratings['expected_losses'] = [len(t.games) + len(t.scheduled) - exp_wins[i] for i,t in enumerate(self.teams)]
-        self.ratings['expected_wins'] = exp_wins
+        exp_wins = [int(round(sum(self.double_schedule.loc[self.double_schedule['team_id']== tid,'win_probability']))) + self.df_teams.at[tid,'wins'] for tid in self.df_teams.index]
+
+        self.df_teams['expected_losses'] = [sum(self.double_games['team_id']==tid) + sum(self.double_schedule['team_id']==tid) - exp_wins[i] for i,tid in enumerate(self.df_teams.index)]
+        self.df_teams['expected_wins'] = exp_wins
 
     def evaluate_predicted_wins(self, exclude_train=False):
         """Evaluate how many past games are predicted correctly"""

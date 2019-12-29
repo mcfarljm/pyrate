@@ -50,8 +50,8 @@ def league_from_massey_hyper_csv(games_file, teams_file):
     df['location'] = df['location'].map(loc_map)
     df['date'] = pd.to_datetime(df['date'].astype(str))
     df.drop(columns='days', inplace=True)
-    names = pd.read_csv(teams_file, index_col=0, squeeze=True, header=None, skipinitialspace=True)
-    return ratingbase.League.from_hyper_table(df, team_names=names)
+    df_teams = pd.read_csv(teams_file, index_col=0, header=None, names=['name'], skipinitialspace=True)
+    return ratingbase.League.from_hyper_table(df, df_teams=df_teams)
 
 def league_from_massey_games_csv(games_file, teams_file):
     df = pd.read_csv(games_file, names=['days','date','team_id','location', 'points','opponent_id','opponent_location','opponent_points'], header=None)
@@ -59,8 +59,8 @@ def league_from_massey_games_csv(games_file, teams_file):
     df['opponent_location'] = df['opponent_location'].map(loc_map)
     df['date'] = pd.to_datetime(df['date'].astype(str))
     df.drop(columns='days', inplace=True)
-    names = pd.read_csv(teams_file, index_col=0, squeeze=True, header=None, skipinitialspace=True)
     scheduled = (df['points'] == 0) & (df['opponent_points'] == 0)
     df.loc[scheduled,['points','opponent_points']] = np.nan # Flag scheduled games
-    return ratingbase.League.from_games_table(df, team_names=names)
+    df_teams = pd.read_csv(teams_file, index_col=0, header=None, names=['name'], skipinitialspace=True)
+    return ratingbase.League(df, df_teams=df_teams, duplicated_games=False)
         
