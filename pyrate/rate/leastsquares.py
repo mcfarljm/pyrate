@@ -8,6 +8,22 @@ from . import gom
 
 loc_map = {'H': 1, 'A': -1, 'N': 0}
 
+def fit_linear_least_squares(X, y):
+    """Fit linear model
+    
+    Returns
+    -------
+    coefs : array
+    XXinv : array
+        Inverse of (X*transpose(X))
+    """
+    num_coefs = np.size(X,1)
+    lqr,coefs,info = scipy.linalg.lapack.dgels(X, y)
+    coefs = coefs[:num_coefs]
+    XXinv = lqr[:num_coefs,:]
+    XXinv,info = scipy.linalg.lapack.dpotri(XXinv,lower=0,overwrite_c=1)
+    return coefs, XXinv
+
 class LeastSquares(RatingSystem):
     def __init__(self, league, game_outcome_measure=None, homecourt=False):
         """
@@ -42,12 +58,9 @@ class LeastSquares(RatingSystem):
 
         games = self.single_games[self.single_games['train']]
 
-        X, nvar = self.get_basis_matrix(games)
+        X = self.get_basis_matrix(games)
+        ratings, self.XXinv = fit_linear_least_squares(X, games['GOM'].values)
 
-        lqr,ratings,info = scipy.linalg.lapack.dgels(X, games['GOM'].values)
-        ratings = ratings[:nvar-1]
-        self.XXinv = lqr[:nvar-1,:]
-        self.XXinv,info = scipy.linalg.lapack.dpotri(self.XXinv,lower=0,overwrite_c=1)
         # Copy upper to lower triangle
         i_lower = np.tril_indices(len(self.XXinv), -1)
         self.XXinv[i_lower] = self.XXinv.T[i_lower]        
@@ -111,7 +124,7 @@ class LeastSquares(RatingSystem):
         if self.homecourt:
             X[:,-1] = games['location'].map(loc_map)
 
-        return X, nvar
+        return X
 
     def predict_game_outcome_measure(self, games):
         """Predict GOM for games in DataFrame
@@ -149,7 +162,7 @@ class LeastSquares(RatingSystem):
         mu = self.predict_game_outcome_measure(games)
 
         # Get terms that account for parameter uncertainty:
-        X, _ = self.get_basis_matrix(games)
+        X = self.get_basis_matrix(games)
         var_terms = np.array([np.dot(np.dot(x, self.XXinv), x) for x in X])
         
         sigma = np.sqrt(self.sigma**2 * (1.0 + var_terms))
