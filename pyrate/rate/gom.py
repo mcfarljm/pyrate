@@ -43,7 +43,22 @@ class CappedPointDifference(GameOutcomeMeasure):
         return np.sign(point_diff) * np.fmin(self.max_point_diff, np.abs(point_diff))
 
 class BetaCurve(GameOutcomeMeasure):
-    def __init__(self, max_point_diff=20, max_gom=20, gom_at_1=3):
+    def __init__(self, max_point_diff=20, gom_at_1=3, max_gom=None):
+        """
+        Parameters
+        ----------
+        max_point_diff : int
+            Limit after which game outcome measure no longer increases
+        gom_at_1 : int
+            Value of the game outcome measure when the point
+            difference is 1 (i.e., the amount earned by winning)
+        max_gom : int or None
+            Value of the game outcome measure at max_point_diff.  If
+            None, set equal to max_point_diff.
+        """
+        if max_gom is None:
+            max_gom = max_point_diff
+        
         normed_gom_at_1 = gom_at_1 / float(max_gom)
         xval = 1.0 / max_point_diff
         def root_func(alpha):
