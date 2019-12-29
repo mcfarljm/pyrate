@@ -35,6 +35,7 @@ class LeastSquares(RatingSystem):
         # though half of calc's are redundant.
         points = self.double_games['points'] - self.double_games['opponent_points']
         self.double_games['GOM'] = self.gom(points)
+        self.double_games = self.double_games.astype({'GOM':'float64'})
 
         # Copy is used here so that loo_predicted_results can be added:
         self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ].copy()
