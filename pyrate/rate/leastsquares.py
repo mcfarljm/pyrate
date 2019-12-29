@@ -44,7 +44,7 @@ class LeastSquares(RatingSystem):
 
         X, nvar = self.get_basis_matrix(games)
 
-        lqr,ratings,info = scipy.linalg.lapack.dgels(X, games['GOM'])
+        lqr,ratings,info = scipy.linalg.lapack.dgels(X, games['GOM'].values)
         ratings = ratings[:nvar-1]
         self.XXinv = lqr[:nvar-1,:]
         self.XXinv,info = scipy.linalg.lapack.dpotri(self.XXinv,lower=0,overwrite_c=1)
@@ -99,7 +99,10 @@ class LeastSquares(RatingSystem):
         ngame = len(games)
         nvar = nteam + 1 if self.homecourt else nteam
 
-        X = np.zeros((ngame,nvar), dtype='int32')
+        # Use float dtype for consistency with GOM in least squares
+        # solve, just to be safe, although doesn't seem to be strictly
+        # necessary.
+        X = np.zeros((ngame,nvar), dtype='float64')
         X[np.arange(ngame), games['team_index']] = 1
         X[np.arange(ngame), games['opponent_index']] = -1
         # One rating is redundant, so assume rating of last team is 0
