@@ -102,6 +102,18 @@ class ToyLeagueGames(unittest.TestCase):
         self.assertEqual(correct, 3)
         self.assertEqual(count, 5)
 
+    def testWeightedLeastSquares(self):
+        expected_ratings = [2.98571429, -2.5, -2.9571429, 2.4714286]
+
+        def weight_func(games):
+            weights = np.ones(len(games))
+            weights[games['points'] == games['opponent_points']] = 0.1
+            return weights
+
+        lsq = leastsquares.LeastSquares(self.league, weight_function=weight_func)
+        for rating, expected_rating in zip(lsq.df_teams['rating'], expected_ratings):
+            self.assertAlmostEqual(rating, expected_rating)        
+
         
 class ToyLeagueScheduled(unittest.TestCase):
 

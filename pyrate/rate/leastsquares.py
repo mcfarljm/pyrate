@@ -8,7 +8,7 @@ from . import gom
 
 loc_map = {'H': 1, 'A': -1, 'N': 0}
 
-def fit_linear_least_squares(X, y):
+def fit_linear_least_squares(X, y, weights=None):
     """Fit linear model
     
     Returns
@@ -18,14 +18,36 @@ def fit_linear_least_squares(X, y):
         Inverse of (X*transpose(X))
     """
     num_coefs = np.size(X,1)
+    if weights is None:
+        X,y = X,y
+    else:
+        rtw = np.diag(np.sqrt(weights))
+        X = np.dot(rtw, X)
+        y = np.dot(rtw, y)
     lqr,coefs,info = scipy.linalg.lapack.dgels(X, y)
     coefs = coefs[:num_coefs]
     XXinv = lqr[:num_coefs,:]
     XXinv,info = scipy.linalg.lapack.dpotri(XXinv,lower=0,overwrite_c=1)
+
+    # Copy upper to lower triangle
+    i_lower = np.tril_indices(len(XXinv), -1)
+    XXinv[i_lower] = XXinv.T[i_lower]        
+    # Now have inv(XX')
     return coefs, XXinv
 
+def test_weight_func(games):
+    return np.repeat(.2, len(games))
+    # weights = np.ones(len(games))
+    # weights[:len(games)//2] = .5
+    # return weights
+
+def test_weight_func2(games):
+    weights = np.ones(len(games))
+    weights[np.abs(games['points'] - games['opponent_points']) > 17] = 0.3
+    return weights
+
 class LeastSquares(RatingSystem):
-    def __init__(self, league, game_outcome_measure=None, homecourt=False):
+    def __init__(self, league, homecourt=False, game_outcome_measure=None, weight_function=None):
         """
         Parameters
         ----------
@@ -34,7 +56,10 @@ class LeastSquares(RatingSystem):
             returns corresponding array of game outcome measures.  May
             be an instance of a GameOutcomeMeasure subclass.
         homecourt : bool
-           Whether to account for homecourt advantage
+            Whether to account for homecourt advantage
+        weight_function : callable
+            Function that accepts a games data frame and ratings
+            array, and returns an array of weights
         """
         super().__init__(league)
         self.homecourt = homecourt
@@ -42,6 +67,7 @@ class LeastSquares(RatingSystem):
             self.gom = gom.PointDifference()
         else:
             self.gom = game_outcome_measure
+        self.weight_function = weight_function
 
         self.fit_ratings()
 
@@ -59,12 +85,15 @@ class LeastSquares(RatingSystem):
         games = self.single_games[self.single_games['train']]
 
         X = self.get_basis_matrix(games)
-        ratings, self.XXinv = fit_linear_least_squares(X, games['GOM'].values)
-
-        # Copy upper to lower triangle
-        i_lower = np.tril_indices(len(self.XXinv), -1)
-        self.XXinv[i_lower] = self.XXinv.T[i_lower]        
-        # Now have inv(XX')
+        if self.weight_function:
+            weights = self.weight_function(self.single_games)
+        else:
+            weights = None
+        ratings, self.XXinv = fit_linear_least_squares(X, games['GOM'].values, weights=weights)
+        
+        if self.weight_function:
+            # Recalculate, since weights could depend on ratings
+            self.weights = self.weight_function(self.single_games)
 
         residuals = games['GOM'] - np.dot(X, ratings)
 
@@ -86,19 +115,39 @@ class LeastSquares(RatingSystem):
         # can be used in probability calculations.  Since the model
         # does not include an intercept term, we compute SST without
         # subtracting the mean of the dependent variable.
-        SST = sum( games['GOM']**2 )
-        SSE = sum(residuals**2)
+        weights = self.weights if self.weight_function else 1.0
+        SST = sum( games['GOM']**2 * weights )
+        SSE = sum( residuals**2 * weights )
         self.Rsquared = 1.0 - SSE/SST
+        
         # DOF: number of observations less model parameters.  There is
         # one less parameter than teams because one rating is
         # arbitrary (sets the location).
-        dof = len(games) - (len(self.df_teams) - 1)
+        nparam = len(self.df_teams) - 1
         if self.homecourt:
-            dof = dof -1
+            nparam += 1
+        if self.weight_function:
+            dof = len(games)
+            V1 = sum(self.weights)
+            V2 = sum(self.weights**2)
+            # This should be further reviewed.  It is based on the
+            # results here:
+            # https://en.wikipedia.org/wiki/Weighted_arithmetic_mean#Reliability_weights,
+            # after using an ad-hoc modification to try and extend it
+            # toward multiple lost degrees of freedom.
+            dof = V2/V1 *(V1**2 / V2 - nparam)
+        else:
+            dof = len(games) - nparam
+
         self.sigma = np.sqrt( SSE / dof )
 
         if dof > 0:
             self.leverages = np.array([np.dot(np.dot(x, self.XXinv), x) for x in X])
+            if self.weight_function:
+                # This is essentially like putting the weights into
+                # the above calculation (i.e., rescaling x just like
+                # the basis was scaled prior to getting XXinv).
+                self.leverages *= self.weights
         else:
             self.leverages = np.ones(len(games))
         self.residuals = residuals
@@ -172,6 +221,9 @@ class LeastSquares(RatingSystem):
 
     def store_leave_one_out_predicted_results(self):
         """Compute and store predicted results based on leave-one-out models"""
+        if any(self.leverages > 1.0):
+            # This shouldn't happen
+            raise ValueError("unexpected leverage value greater than 1")
         loo_resids = self.residuals / (1.0 - self.leverages)
         loo_gom_preds = self.single_games.loc[self.single_games['train'],'GOM'] - loo_resids
         loo_results = ['W' if gom > 0.0 else 'L' for gom in loo_gom_preds]
