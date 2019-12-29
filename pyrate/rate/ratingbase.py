@@ -164,20 +164,23 @@ class RatingSystem:
         correct = np.zeros(len(pvals), dtype=int)
 
         total_count = 0 # Sanity check
-        for team in self.teams:
-            for game_id, game in team.games.iterrows():
-                if exclude_train and game['train']:
-                    continue                
-                loc = 1 if game['location']=='H' else -1
-                pred_prob = self.predict_win_probability(team, self.teams[game['opponent_index']], loc)
-                pred_outcome = 'W' if pred_prob > 0.5 else 'L'
-                if pred_prob > 0.5:
-                    total_count += 1
-                    # Determine interval
-                    interval = np.where(pred_prob>pvals)[0][-1]
-                    counts[interval] += 1
-                    if pred_outcome == game['result']:
-                        correct[interval] += 1
+
+        # Use double games for book-keeping simplicity...
+        if exclude_train:
+            games = self.double_games[self.double_games['train']]
+        else:
+            games = self.double_games
+
+        pred_probs = self.predict_win_probability(games)
+        pred_outcomes = ['W' if p>0.5 else 'L' for p in pred_probs]
+        for p,wl,(index,game) in zip(pred_probs,pred_outcomes,games.iterrows()):
+            if p > 0.5:
+                total_count += 1
+                # Determine interval
+                interval = np.where(p>pvals)[0][-1]
+                counts[interval] += 1
+                if wl == game['result']:
+                    correct[interval] += 1            
 
         print("Total count:", total_count)
         for i,p in enumerate(pvals):
