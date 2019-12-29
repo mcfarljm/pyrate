@@ -1,9 +1,13 @@
 """Helper classes for formulating game outcome measure"""
 
 import numpy as np
-import matplotlib.pyplot as plt
 import scipy.stats
 import scipy.optimize
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass
+    
 
 class GameOutcomeMeasure:
     """Base class for game outcome measure
