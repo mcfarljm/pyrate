@@ -30,8 +30,6 @@ class LeastSquares(RatingSystem):
         self.fit_ratings()
 
     def fit_ratings(self):
-        nteam = len(self.teams)
-
         # Need game outcome measure and normalized score to be stored
         # in double_games.  Compute them directly for simplicity, even
         # though half of calc's are redundant.
@@ -63,7 +61,6 @@ class LeastSquares(RatingSystem):
 
         ratings = np.append(ratings, 0) # Add 0 rating for last team
         ratings -= np.mean(ratings) # Renormalize
-        self.ratings = ratings
 
         # Store normalized score:
         self.double_games['normalized_score'] = self.double_games['GOM'] + ratings[self.double_games['opponent_index']]
@@ -80,16 +77,16 @@ class LeastSquares(RatingSystem):
         # DOF: number of observations less model parameters.  There is
         # one less parameter than teams because one rating is
         # arbitrary (sets the location).
-        dof = len(games) - (len(self.teams) - 1)
+        dof = len(games) - (len(self.df_teams) - 1)
         if self.homecourt:
             dof = dof -1
         self.sigma = np.sqrt( SSE / dof )
 
-        self.store_ratings()
+        self.store_ratings(ratings)
         self.store_predictions()
 
     def get_basis_matrix(self, games):
-        nteam = len(self.teams)
+        nteam = len(self.df_teams)
         ngame = len(games)
         nvar = nteam + 1 if self.homecourt else nteam
 
@@ -118,8 +115,8 @@ class LeastSquares(RatingSystem):
         # retains the indexing of "games" and makes it possible to use
         # Series operations in subsquent calculations.  Note that we
         # convert to values first because otherwise we end up with the
-        # indexes from self.ratings, which is not what we want.
-        y = pd.Series(self.ratings.loc[games['team_id'],'rating'].values - self.ratings.loc[games['opponent_id'],'rating'].values, index=games.index)
+        # indexes from self.df_teams, which is not what we want.
+        y = pd.Series(self.df_teams.loc[games['team_id'],'rating'].values - self.df_teams.loc[games['opponent_id'],'rating'].values, index=games.index)
         if self.homecourt and 'location' in games:
             y += games['location'].map(loc_map)
         return y
