@@ -133,8 +133,8 @@ class RatingSystem:
         self.single_schedule = self.double_schedule[ self.double_schedule['team_id'] < self.double_schedule['opponent_id'] ]
 
     def summarize(self):
-        print('{} played games'.format(sum([len(t.games) for t in self.teams])//2))
-        num_sched = sum([len(t.scheduled) for t in self.teams])//2
+        print('{} played games'.format(len(self.double_games)//2))
+        num_sched = len(self.double_schedule)//2
         if num_sched > 0:
             print('{} scheduled games'.format(num_sched))
         if self.homecourt:
@@ -165,7 +165,7 @@ class RatingSystem:
             self.df_teams.at[team_id,'strength_of_schedule_all'] = np.mean(self.df_teams.loc[np.concatenate((games['opponent_id'],schedule['opponent_id'])),'rating'])
 
     def display_ratings(self, n=10):
-        print(self.ratings.sort_values(by='rating', ascending=False).head(n))
+        print(self.df_teams.sort_values(by='rating', ascending=False).head(n))
 
     def store_predictions(self):
         self.double_games['predicted_result'] = self.predict_result(self.double_games)
@@ -264,17 +264,14 @@ class RatingSystem:
             # to increase (alternatively, could just delete all
             # rating_id entries from games and teams here and then get
             # a new arbitrary rating_id before adding the data)
-            n_games = sum([len(t.games) for t in self.teams]) // 2
-            n_scheduled = sum([len(t.scheduled) for t in self.teams]) // 2
+            n_games = len(self.double_games) // 2
+            n_scheduled = len(self.double_schedule) // 2
             conn.execute('UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=?, games_played = ?, games_scheduled = ? WHERE rating_id = ?;', (self.home_adv, self.Rsquared, self.consistency, n_games, n_scheduled, rating_id))
 
             ### teams table
-            df = self.ratings.copy()
+            df = self.df_teams.copy()
             df['rating_id'] = rating_id
             df['team_id'] = df.index
-            df['wins'] = [t.wins for t in self.teams]
-            df['losses'] = [t.losses for t in self.teams]
-            df['name'] = [t.name for t in self.teams]
 
             # First delete previous entries for this league:
             conn.execute('DELETE FROM teams WHERE rating_id=?;', (rating_id,))
@@ -285,7 +282,6 @@ class RatingSystem:
                                'name': sqlt.Text,
                                'rating': sqlt.Float,
                                'rank': sqlt.Integer,
-                               'strength_of_schedule': sqlt.Float,
                                'wins': sqlt.Integer,
                                'losses': sqlt.Integer,
                                'expected_wins': sqlt.Integer,
