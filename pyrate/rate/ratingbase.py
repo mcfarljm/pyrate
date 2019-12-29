@@ -139,6 +139,9 @@ class RatingSystem:
             print('{} scheduled games'.format(num_sched))
         if self.homecourt:
             print('home advantage: {:.1f}'.format(self.home_adv))
+        print('Consistency: {:.3f}'.format(self.consistency))
+        if hasattr(self, 'loo_consistency'):
+            print('LOO consistency: {:.3f}'.format(self.loo_consistency))
 
     def store_ratings(self, ratings):
         """After child method is called, organize rating data into DataFrame"""
@@ -172,6 +175,9 @@ class RatingSystem:
         self.double_games['win_probability'] = self.predict_win_probability(self.double_games)
         self.double_schedule['win_probability'] = self.predict_win_probability(self.double_schedule)
         self.consistency = sum(self.double_games['predicted_result']==self.double_games['result']) / float(len(self.double_games))
+        if hasattr(self, 'single_games') and 'loo_predicted_result' in self.single_games:
+            games = self.single_games[self.single_games['train']]
+            self.loo_consistency = sum(games['loo_predicted_result']==games['result']) / float(len(games))        
 
         # Expected wins, losses:
         exp_wins = [int(round(sum(self.double_schedule.loc[self.double_schedule['team_id']== tid,'win_probability']))) + self.df_teams.at[tid,'wins'] for tid in self.df_teams.index]

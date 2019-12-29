@@ -36,7 +36,8 @@ class LeastSquares(RatingSystem):
         points = self.double_games['points'] - self.double_games['opponent_points']
         self.double_games['GOM'] = self.gom(points)
 
-        self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ]
+        # Copy is used here so that loo_predicted_results can be added:
+        self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ].copy()
 
         games = self.single_games[self.single_games['train']]
 
@@ -81,6 +82,13 @@ class LeastSquares(RatingSystem):
         if self.homecourt:
             dof = dof -1
         self.sigma = np.sqrt( SSE / dof )
+
+        if dof > 0:
+            self.leverages = np.array([np.dot(np.dot(x, self.XXinv), x) for x in X])
+        else:
+            self.leverages = np.ones(len(games))
+        self.residuals = residuals
+        self.store_leave_one_out_predicted_results()
 
         self.store_ratings(ratings)
         self.store_predictions()
@@ -144,4 +152,12 @@ class LeastSquares(RatingSystem):
 
         # 1-normcdf(0,mu) = normcdf(mu)
         return scipy.stats.norm.cdf(mu, scale=sigma)
+
+    def store_leave_one_out_predicted_results(self):
+        """Compute and store predicted results based on leave-one-out models"""
+        loo_resids = self.residuals / (1.0 - self.leverages)
+        loo_gom_preds = self.single_games.loc[self.single_games['train'],'GOM'] - loo_resids
+        loo_results = ['W' if gom > 0.0 else 'L' for gom in loo_gom_preds]
+
+        self.single_games.loc[self.single_games['train'],'loo_predicted_result'] = loo_results
 
