@@ -219,13 +219,18 @@ class LeastSquares(RatingSystem):
         # 1-normcdf(0,mu) = normcdf(mu)
         return scipy.stats.norm.cdf(mu, scale=sigma)
 
-    def store_leave_one_out_predicted_results(self):
-        """Compute and store predicted results based on leave-one-out models"""
+    def leave_one_out_predictions(self):
+        """Compute leave-one-out predictions of game outcome measure"""
         if any(self.leverages > 1.0):
             # This shouldn't happen
             raise ValueError("unexpected leverage value greater than 1")
         loo_resids = self.residuals / (1.0 - self.leverages)
         loo_gom_preds = self.single_games.loc[self.single_games['train'],'GOM'] - loo_resids
+        return loo_gom_preds
+
+    def store_leave_one_out_predicted_results(self):
+        """Compute and store predicted results based on leave-one-out models"""
+        loo_gom_preds = self.leave_one_out_predictions()
         loo_results = ['W' if gom > 0.0 else 'L' for gom in loo_gom_preds]
 
         self.single_games.loc[self.single_games['train'],'loo_predicted_result'] = loo_results

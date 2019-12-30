@@ -114,6 +114,54 @@ class ToyLeagueGames(unittest.TestCase):
         for rating, expected_rating in zip(lsq.df_teams['rating'], expected_ratings):
             self.assertAlmostEqual(rating, expected_rating)        
 
+class LeaveOneOutPredictions(unittest.TestCase):
+
+    def setUp(self):
+        # Data from Massey (1997) Example 4.2.  Home/away values have
+        # been added.
+        self.raw_df = pd.DataFrame(
+            [[1, 10, 'H', 2, 6, 'A'],
+             [3, 4, 'H', 4, 4, 'A'],
+             [4, 9, 'H', 2, 2, 'A'],
+             [1, 8, 'A', 4, 6, 'H'],
+             [2, 3, 'H', 3, 2, 'A']],
+            columns=['team_id', 'points', 'location', 'opponent_id', 'opponent_points', 'opponent_location'])
+
+    def leaveOneOutDriver(self, weight_func=None):
+
+        league = ratingbase.League(self.raw_df, duplicated_games=False)
+        lsq_full = leastsquares.LeastSquares(league, weight_function=weight_func)
+        loo_preds = lsq_full.leave_one_out_predictions()
+        loo_preds.sort_index(inplace=True)
+
+        def get_actual_LOO_pred(index):
+            df = self.raw_df.drop(index=index)
+            league = ratingbase.League(df, duplicated_games=False)
+            lsq = leastsquares.LeastSquares(league, weight_function=weight_func)
+            pred_gom = lsq.predict_game_outcome_measure(self.raw_df.loc[[index]])
+            # In case the constructor flipped the orientation of the
+            # teams, reverse the prediction
+            if self.raw_df.loc[index,'team_id'] != lsq_full.single_games.loc[index,'team_id']:
+                pred_gom = pred_gom * -1.0
+            return pred_gom.iat[0]
+
+        actual_loo_preds = pd.Series([get_actual_LOO_pred(index) for index in self.raw_df.index], index=self.raw_df.index)
+        actual_loo_preds.sort_index(inplace=True)
+
+        for index, loo_actual in actual_loo_preds.iteritems():
+            self.assertAlmostEqual(loo_actual, loo_preds[index])
+
+    def testLeaveOneOut(self):
+        self.leaveOneOutDriver()
+
+    def testLeaveOneOutWeighted(self):
+        def weight_func(games):
+            weights = np.ones(len(games))
+            weights[games['points'] == games['opponent_points']] = 0.1
+            return weights
+
+        self.leaveOneOutDriver(weight_func)
+
         
 class ToyLeagueScheduled(unittest.TestCase):
 
