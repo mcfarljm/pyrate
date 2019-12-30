@@ -36,6 +36,12 @@ class League:
         elif 'opponent_points' not in df_games:
             raise ValueError("expected 'opponent_points' column")        
 
+        if not duplicated_games:
+            df2 = df_games.rename(columns={'team_id':'opponent_id', 'opponent_id':'team_id',
+                                           'points':'opponent_points','opponent_points':'points',
+                                           'location':'opponent_location','opponent_location':'location'})
+            df_games = pd.concat((df_games,df2), ignore_index=True, join='inner')
+
         # Note: although for interactive use, indexing by name is
         # convenient, currently index by id to cover case where names
         # are not provided (and maybe it provides faster lookup?)        
@@ -48,14 +54,6 @@ class League:
         df_games = df_games.copy()
         df_games['team_index'] = df_games['team_id'].apply(lambda x: team_ids.index(x))            
         df_games['opponent_index'] = df_games['opponent_id'].apply(lambda x: team_ids.index(x))
-
-        if not duplicated_games:
-            df2 = df_games.rename(columns={'team_id':'opponent_id', 'opponent_id':'team_id',
-                                           'team_index':'opponent_index', 'opponent_index':'team_index',
-                                           'points':'opponent_points','opponent_points':'points',
-                                           'location':'opponent_location','opponent_location':'location'})
-            df_games = pd.concat((df_games,df2), ignore_index=True, join='inner')
-            
 
         # Split up into games and schedule
         unplayed = (df_games['points'].isnull() | df_games['opponent_points'].isnull())
