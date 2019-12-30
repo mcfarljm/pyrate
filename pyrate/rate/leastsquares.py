@@ -107,7 +107,7 @@ class LeastSquares(RatingSystem):
         ratings -= np.mean(ratings) # Renormalize
 
         # Store normalized score:
-        self.double_games['normalized_score'] = self.double_games['GOM'] + ratings[self.double_games['opponent_index']]
+        self.double_games['normalized_score'] = self.double_games['GOM'] + ratings[self.double_games['opponent_index'].values]
         if self.homecourt:
             self.double_games['normalized_score'] -= self.double_games['location'].map(loc_map) * self.home_adv
 

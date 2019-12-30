@@ -40,7 +40,7 @@ class League:
             df2 = df_games.rename(columns={'team_id':'opponent_id', 'opponent_id':'team_id',
                                            'points':'opponent_points','opponent_points':'points',
                                            'location':'opponent_location','opponent_location':'location'})
-            df_games = pd.concat((df_games,df2), ignore_index=True, join='inner')
+            df_games = pd.concat((df_games,df2), join='inner')
 
         # Note: although for interactive use, indexing by name is
         # convenient, currently index by id to cover case where names
