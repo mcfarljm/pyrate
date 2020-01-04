@@ -34,7 +34,7 @@ class League:
         elif 'opponent_id' not in df_games:
             raise ValueError("expected 'opponent_id' column")
         elif 'opponent_points' not in df_games:
-            raise ValueError("expected 'opponent_points' column")        
+            raise ValueError("expected 'opponent_points' column")
 
         if not duplicated_games:
             df2 = df_games.rename(columns={'team_id':'opponent_id', 'opponent_id':'team_id',
@@ -44,7 +44,7 @@ class League:
 
         # Note: although for interactive use, indexing by name is
         # convenient, currently index by id to cover case where names
-        # are not provided (and maybe it provides faster lookup?)        
+        # are not provided (and maybe it provides faster lookup?)
         if df_teams is None:
             self.teams = pd.DataFrame(index=np.sort(df_games['team_id'].unique()))
         else:
@@ -52,7 +52,7 @@ class League:
 
         team_ids = list(self.teams.index)
         df_games = df_games.copy()
-        df_games['team_index'] = df_games['team_id'].apply(lambda x: team_ids.index(x))            
+        df_games['team_index'] = df_games['team_id'].apply(lambda x: team_ids.index(x))
         df_games['opponent_index'] = df_games['opponent_id'].apply(lambda x: team_ids.index(x))
 
         # Split up into games and schedule
@@ -73,7 +73,7 @@ class League:
 
         self.teams['wins'] = [sum(self.double_games.loc[self.double_games['team_id'] == tid, 'result'] == 'W') for tid in self.teams.index]
         self.teams['losses'] = [sum(self.double_games['team_id']==tid) - self.teams.at[tid,'wins'] for tid in self.teams.index]
-        
+
 
     @classmethod
     def from_hyper_table(cls, df_games, df_teams=None):
@@ -111,7 +111,7 @@ class League:
             # If there is a mismatch, game_id's not appearing twice
             # get dropped by the join
             raise ValueError("game_id mismatch")
-        
+
         # For compatibility with Massey data, treat 0 points as
         # scheduled game (could be added as a flag)
         scheduled = (games['points'] == 0) & (games['opponent_points'] == 0)
@@ -175,7 +175,7 @@ class RatingSystem:
         self.consistency = sum(self.double_games['predicted_result']==self.double_games['result']) / float(len(self.double_games))
         if hasattr(self, 'single_games') and 'loo_predicted_result' in self.single_games:
             games = self.single_games[self.single_games['train']]
-            self.loo_consistency = sum(games['loo_predicted_result']==games['result']) / float(len(games))        
+            self.loo_consistency = sum(games['loo_predicted_result']==games['result']) / float(len(games))
 
         # Expected wins, losses:
         exp_wins = [int(round(sum(self.double_schedule.loc[self.double_schedule['team_id']== tid,'win_probability']))) + self.df_teams.at[tid,'wins'] for tid in self.df_teams.index]
@@ -218,7 +218,7 @@ class RatingSystem:
                 interval = np.where(p>pvals)[0][-1]
                 counts[interval] += 1
                 if wl == game['result']:
-                    correct[interval] += 1            
+                    correct[interval] += 1
 
         print("Total count:", total_count)
         for i,p in enumerate(pvals):
@@ -252,7 +252,7 @@ class RatingSystem:
             # needs to be used to remove associated game/team entries,
             # but we also need to update the rating if that row
             # already exists
-            
+
             # Check whether rating exists:
             output = conn.execute('SELECT rating_id FROM ratings WHERE name=?', (rating_name,))
             result = output.fetchone()

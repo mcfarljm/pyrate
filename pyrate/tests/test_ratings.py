@@ -24,7 +24,7 @@ class ToyLeagueHyper(unittest.TestCase):
              [5, 3, 2, 'A']], columns=['game_id', 'team_id', 'points', 'location'])
 
         self.league = ratingbase.League.from_hyper_table(self.raw_df)
-        
+
     def testLeastSquares(self):
         expected_ratings = [2.375, -2.5, -1.125, 1.25]
         lsq = leastsquares.LeastSquares(self.league)
@@ -70,7 +70,7 @@ class ToyLeagueGames(unittest.TestCase):
             columns=['team_id', 'points', 'location', 'opponent_id', 'opponent_points', 'opponent_location'])
 
         self.league = ratingbase.League(self.raw_df, duplicated_games=False)
-        
+
     def testLeastSquares(self):
         expected_ratings = [2.375, -2.5, -1.125, 1.25]
         lsq = leastsquares.LeastSquares(self.league)
@@ -112,7 +112,7 @@ class ToyLeagueGames(unittest.TestCase):
 
         lsq = leastsquares.LeastSquares(self.league, weight_function=weight_func)
         for rating, expected_rating in zip(lsq.df_teams['rating'], expected_ratings):
-            self.assertAlmostEqual(rating, expected_rating)        
+            self.assertAlmostEqual(rating, expected_rating)
 
 class LeaveOneOutPredictions(unittest.TestCase):
 
@@ -162,7 +162,7 @@ class LeaveOneOutPredictions(unittest.TestCase):
 
         self.leaveOneOutDriver(weight_func)
 
-        
+
 class ToyLeagueScheduled(unittest.TestCase):
 
     def setUp(self):
@@ -210,4 +210,3 @@ class ErrorTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-             

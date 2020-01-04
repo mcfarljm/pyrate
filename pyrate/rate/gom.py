@@ -7,7 +7,7 @@ try:
     import matplotlib.pyplot as plt
 except:
     pass
-    
+
 
 class GameOutcomeMeasure:
     """Base class for game outcome measure
@@ -24,7 +24,7 @@ class GameOutcomeMeasure:
                 ub = self.max_point_diff
             else:
                 ub = 20
-        
+
         xvals = np.linspace(lb, ub, 200)
         f, ax = plt.subplots()
         ax.plot(xvals, self(xvals))
@@ -62,7 +62,7 @@ class BetaCurve(GameOutcomeMeasure):
         """
         if max_gom is None:
             max_gom = max_point_diff
-        
+
         normed_gom_at_1 = gom_at_1 / float(max_gom)
         xval = 1.0 / max_point_diff
         def root_func(alpha):

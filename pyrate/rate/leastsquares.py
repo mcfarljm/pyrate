@@ -10,7 +10,7 @@ loc_map = {'H': 1, 'A': -1, 'N': 0}
 
 def fit_linear_least_squares(X, y, weights=None):
     """Fit linear model
-    
+
     Returns
     -------
     coefs : array
@@ -31,7 +31,7 @@ def fit_linear_least_squares(X, y, weights=None):
 
     # Copy upper to lower triangle
     i_lower = np.tril_indices(len(XXinv), -1)
-    XXinv[i_lower] = XXinv.T[i_lower]        
+    XXinv[i_lower] = XXinv.T[i_lower]
     # Now have inv(XX')
     return coefs, XXinv
 
@@ -90,7 +90,7 @@ class LeastSquares(RatingSystem):
         else:
             weights = None
         ratings, self.XXinv = fit_linear_least_squares(X, games['GOM'].values, weights=weights)
-        
+
         if self.weight_function:
             # Recalculate, since weights could depend on ratings
             self.weights = self.weight_function(self.single_games)
@@ -119,7 +119,7 @@ class LeastSquares(RatingSystem):
         SST = sum( games['GOM']**2 * weights )
         SSE = sum( residuals**2 * weights )
         self.Rsquared = 1.0 - SSE/SST
-        
+
         # DOF: number of observations less model parameters.  There is
         # one less parameter than teams because one rating is
         # arbitrary (sets the location).
@@ -213,7 +213,7 @@ class LeastSquares(RatingSystem):
         # Get terms that account for parameter uncertainty:
         X = self.get_basis_matrix(games)
         var_terms = np.array([np.dot(np.dot(x, self.XXinv), x) for x in X])
-        
+
         sigma = np.sqrt(self.sigma**2 * (1.0 + var_terms))
 
         # 1-normcdf(0,mu) = normcdf(mu)
@@ -234,4 +234,3 @@ class LeastSquares(RatingSystem):
         loo_results = ['W' if gom > 0.0 else 'L' for gom in loo_gom_preds]
 
         self.single_games.loc[self.single_games['train'],'loo_predicted_result'] = loo_results
-

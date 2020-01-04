@@ -9,7 +9,7 @@ class MasseyURL:
     """URL builder for Massey web data"""
     base_url = 'https://www.masseyratings.com/scores.php?s={league}{sub}&all=1&mode={mode}{scheduled}&format={format}'
     # Format: 0="text", 1="matlab games", 2="matlab teams", 3="matlab hyper"
-    
+
     def __init__(self, league, mode=3, scheduled=True, ncaa_d1=False):
         """
         Parameters
@@ -40,7 +40,7 @@ class MasseyURL:
 
     def teams_url(self):
         return self.base_url.format(league=self.league, mode=self.mode, scheduled=self.scheduled, format=2, sub=self.sub)
-        
+
     def games_url(self):
         return self.base_url.format(league=self.league, mode=self.mode, scheduled=self.scheduled, format=1, sub=self.sub)
 
@@ -63,4 +63,3 @@ def league_from_massey_games_csv(games_file, teams_file):
     df.loc[scheduled,['points','opponent_points']] = np.nan # Flag scheduled games
     df_teams = pd.read_csv(teams_file, index_col=0, header=None, names=['name'], skipinitialspace=True)
     return ratingbase.League(df, df_teams=df_teams, duplicated_games=False)
-        
