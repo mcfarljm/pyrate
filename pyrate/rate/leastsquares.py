@@ -94,6 +94,10 @@ class LeastSquares(RatingSystem):
         if self.weight_function:
             # Recalculate, since weights could depend on ratings
             self.weights = self.weight_function(self.single_games)
+            # And for offense/defense calcs:
+            double_weights = self.weight_function(self.double_games)
+        else:
+            double_weights = None
 
         residuals = games['GOM'] - np.dot(X, ratings)
 
@@ -105,6 +109,8 @@ class LeastSquares(RatingSystem):
 
         ratings = np.append(ratings, 0) # Add 0 rating for last team
         ratings -= np.mean(ratings) # Renormalize
+
+        offense, defense = self.get_offense_defense(self.double_games[self.double_games['train']], ratings, double_weights)
 
         # Store normalized score:
         self.double_games['normalized_score'] = self.double_games['GOM'] + ratings[self.double_games['opponent_index'].values]
@@ -153,7 +159,7 @@ class LeastSquares(RatingSystem):
         self.residuals = residuals
         self.store_leave_one_out_predicted_results()
 
-        self.store_ratings(ratings)
+        self.store_ratings(ratings, offense, defense)
         self.store_predictions()
 
     def get_basis_matrix(self, games):
@@ -174,6 +180,45 @@ class LeastSquares(RatingSystem):
             X[:,-1] = games['location'].map(loc_map)
 
         return X
+
+    def get_basis_matrix_defense(self, double_games):
+        """Basis matrix for solving off/def equations wrt defense
+
+        Each games needs to be represented twice, once in each position"""
+        nteam = len(self.df_teams)
+        ngame = len(double_games)
+        nvar = nteam
+
+        # Use float dtype for consistency with GOM in least squares
+        # solve, just to be safe, although doesn't seem to be strictly
+        # necessary.
+        X = np.zeros((ngame,nvar), dtype='float64')
+        X[np.arange(ngame), double_games['team_index']] = 1
+        X[np.arange(ngame), double_games['opponent_index']] = 1
+        return X
+
+    def get_offense_defense(self, double_games, ratings, weights):
+        X = self.get_basis_matrix_defense(double_games)
+        # Create rhs. The relationship GOM=PF-PA is implied but will not
+        # strictly hold if GOM is not defined this way. As a workaround, define
+        # "psuedo points for" as GOM+PA.
+        pseudo_pf = double_games['GOM'] + double_games['opponent_points']
+        # For consistency, half of the home court advantage needs to be
+        # assigned to each of the two entries for each game.
+        if self.homecourt:
+            pseudo_pf -= 0.5 * self.home_adv * double_games['location'].map(loc_map)
+        rhs = ratings[double_games['team_index'].values] - pseudo_pf
+
+        defense, _ = fit_linear_least_squares(X, rhs, weights=weights)
+        # At this point, defense has an implied normalization carried over from
+        # ratings. We can change this and normalize average defense to 0, and
+        # after applying the same normalization, offense will be interpreted as
+        # expected points against average defense.
+        offense = ratings - defense
+        mean_def = np.mean(defense)
+        defense -= mean_def
+        offense -= mean_def
+        return offense, defense
 
     def predict_game_outcome_measure(self, games):
         """Predict GOM for games in DataFrame

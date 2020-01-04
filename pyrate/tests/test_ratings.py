@@ -102,12 +102,23 @@ class ToyLeagueGames(unittest.TestCase):
         self.assertEqual(correct, 3)
         self.assertEqual(count, 5)
 
+    def testOffenseDefense(self):
+        expected_offense = [8.625, 4.0625, 2.625, 6.1875]
+        expected_defense = [-0.875, -1.1875, 1.625, 0.4375]
+
+        lsq = leastsquares.LeastSquares(self.league)
+        for offense, expected_offense in zip(lsq.df_teams['offense'], expected_offense):
+            self.assertAlmostEqual(offense, expected_offense)
+        for defense, expected_defense in zip(lsq.df_teams['defense'], expected_defense):
+            self.assertAlmostEqual(defense, expected_defense)
+
     def testWeightedLeastSquares(self):
         expected_ratings = [2.98571429, -2.5, -2.9571429, 2.4714286]
 
         def weight_func(games):
             weights = np.ones(len(games))
-            weights[games['points'] == games['opponent_points']] = 0.1
+            # .values needed when called with double_games...
+            weights[(games['points'] == games['opponent_points']).values] = 0.1
             return weights
 
         lsq = leastsquares.LeastSquares(self.league, weight_function=weight_func)
@@ -157,7 +168,7 @@ class LeaveOneOutPredictions(unittest.TestCase):
     def testLeaveOneOutWeighted(self):
         def weight_func(games):
             weights = np.ones(len(games))
-            weights[games['points'] == games['opponent_points']] = 0.1
+            weights[(games['points'] == games['opponent_points']).values] = 0.1
             return weights
 
         self.leaveOneOutDriver(weight_func)

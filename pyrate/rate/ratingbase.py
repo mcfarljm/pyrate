@@ -141,10 +141,14 @@ class RatingSystem:
         if hasattr(self, 'loo_consistency'):
             print('LOO consistency: {:.3f}'.format(self.loo_consistency))
 
-    def store_ratings(self, ratings):
+    def store_ratings(self, ratings, offense, defense):
         """After child method is called, organize rating data into DataFrame"""
         self.df_teams['rating'] = ratings
         self.df_teams['rank'] = rank_array(ratings)
+        self.df_teams['offense'] = offense
+        self.df_teams['defense'] = defense
+        self.df_teams['offense_rank'] = rank_array(offense)
+        self.df_teams['defense_rank'] = rank_array(defense)
 
         self.get_strength_of_schedule()
 
