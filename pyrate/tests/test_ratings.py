@@ -112,6 +112,16 @@ class ToyLeagueGames(unittest.TestCase):
         for defense, expected_defense in zip(lsq.df_teams['defense'], expected_defense):
             self.assertAlmostEqual(defense, expected_defense)
 
+    def testOffenseDefenseHome(self):
+        expected_offense = [8.625, 4.2361111 , 2.625, 6.0138889]
+        expected_defense = [-0.875, -1.0138889, 1.625, 0.2638889]
+
+        lsq = leastsquares.LeastSquares(self.league, homecourt=True)
+        for offense, expected_offense in zip(lsq.df_teams['offense'], expected_offense):
+            self.assertAlmostEqual(offense, expected_offense)
+        for defense, expected_defense in zip(lsq.df_teams['defense'], expected_defense):
+            self.assertAlmostEqual(defense, expected_defense)
+
     def testWeightedLeastSquares(self):
         expected_ratings = [2.98571429, -2.5, -2.9571429, 2.4714286]
 
