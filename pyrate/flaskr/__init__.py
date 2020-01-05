@@ -42,11 +42,11 @@ def create_app(test_config=None):
 
         if request.args.get('mode') == 'rating':
             fmts.update({
-                'SoS(p)': '{:.2f}',
-                'SoS(f)': '{:.2f}',
-                'SoS(a)': '{:.2f}',
-                'Off': '{:.2f}',
-                'Def': '{:.2f}'})
+                'SoS(p)': '{:.1f}',
+                'SoS(f)': '{:.1f}',
+                'SoS(a)': '{:.1f}',
+                'Off': '{:.1f}',
+                'Def': '{:.1f}'})
             
         return render_template('ratings.html', rating=rating, ratings=ratings, updated=updated, table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').set_uuid('ratingTable').render(escape=False))
 
