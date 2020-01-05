@@ -1,14 +1,17 @@
 {% extends "base.html" %}
 {% block title %}{{ rating }}{% endblock %}
 {% block content %}
-<h3>{{ rating }}</h3>
 
-<p class="text-muted">Updated: {{ updated }}</p>
+<div class="container">
+  <h3>{{ rating }}</h3>
 
-<p style="font-size: smaller">Legend: SoS = Strength of Schedule (<span style="font-weight:bold">p</span>ast, <span style="font-weight:bold">f</span>uture)</p>
+  <p class="text-muted">Updated: {{ updated }}</p>
 
-<p style="font-size: small">Click column name to sort</p>
+  <p style="font-size: smaller">Legend: SoS = Strength of Schedule (<span style="font-weight:bold">p</span>ast, <span style="font-weight:bold">f</span>uture)</p>
 
-{{ table|safe }}
+  <p style="font-size: small">Click column name to sort</p>
+
+  {{ table|safe }}
+</div>
 
 {% endblock %}

@@ -32,6 +32,9 @@
     
     <!-- Custom styles for bootstrap template -->
     <style>
+     /* a:visited {
+        color:#37404e
+        } */
      body {
          padding-top: 5rem;
      }
@@ -44,7 +47,7 @@
   
   <body>
     <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-      <a class="navbar-brand" href="{{ url_for('home') }}">Ratings</a>
+      {% block nav_main %}<a class="navbar-brand" href="{{ url_for('home') }}">Ratings</a>{% endblock %}
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -54,28 +57,26 @@
           <li class="nav-item active">
             <a class="nav-link" href="{{ url_for('home') }}">Home<span class="sr-only">(current)</span></a>
           </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#">Link</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a>
-          </li>
+          <!-- <li class="nav-item">
+               <a class="nav-link" href="#">Link</a>
+               </li>
+               <li class="nav-item">
+               <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a>
+               </li> -->
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="dropdown01" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Dropdown</a>
+            <a class="nav-link dropdown-toggle" href="#" id="dropdown01" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Leagues</a>
             <div class="dropdown-menu" aria-labelledby="dropdown01">
-              <a class="dropdown-item" href="#">Action</a>
-              <a class="dropdown-item" href="#">Another action</a>
-              <a class="dropdown-item" href="#">Something else here</a>
+              {% for rating_name in ratings %}
+              <a class="dropdown-item" href="{{ url_for('rating_system', rating=rating_name ) }}">{{ rating_name }}</a>
+              {% endfor %}
             </div>
           </li>
         </ul>
       </div>
     </nav>
 
-    <main role="main" class="container">
-      <!-- <div > -->
+    <main role="main">
       {% block content %}{% endblock %}
-      <!-- </div> -->
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>

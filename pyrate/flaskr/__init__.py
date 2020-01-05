@@ -31,7 +31,7 @@ def create_app(test_config=None):
         fmts = {'Home Advantage':'{:.1f}',
                 'R<sup>2</sup>':'{:.2f}',
                 'Consistency':'{:.2f}',}
-        return render_template('home.html', updated=updated, ratings_summary=ratings_summary.style.hide_index().format(fmts).set_properties(subset=['Home Advantage','Consistency'], **{'text-align':'center'}).render(escape=False))
+        return render_template('home.html', ratings=ratings, updated=updated, ratings_summary=ratings_summary.style.hide_index().format(fmts).set_properties(subset=['Home Advantage','Consistency'], **{'text-align':'center'}).render(escape=False))
 
     @app.route('/<rating>')
     def rating_system(rating):
@@ -42,7 +42,7 @@ def create_app(test_config=None):
                 'SoS(p)': '{:.2f}',
                 'SoS(f)': '{:.2f}',
                 'SoS(a)': '{:.2f}'}
-        return render_template('ratings.html', rating=rating, updated=updated, table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').set_uuid('ratingTable').render(escape=False))
+        return render_template('ratings.html', rating=rating, ratings=ratings, updated=updated, table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').set_uuid('ratingTable').render(escape=False))
 
     @app.route('/<rating>/<team>')
     def team_page(rating, team):
@@ -64,7 +64,7 @@ def create_app(test_config=None):
         games = df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero').set_uuid('gameTable').render(escape=False)
         scheduled = df_sched.style.hide_index().format(fmts_sched).set_uuid('scheduleTable').render(escape=False)
         
-        return render_template('team.html', rating=rating, team=team, team_data=td, table=games, scheduled=scheduled)
+        return render_template('team.html', rating=rating, team=team, ratings=ratings, team_data=td, table=games, scheduled=scheduled)
 
 
     db.init_app(app)
