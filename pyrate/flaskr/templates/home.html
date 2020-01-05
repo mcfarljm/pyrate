@@ -2,33 +2,36 @@
 {% block title %}Ratings{% endblock %}
 {% block content %}
 
-<h3>Ratings</h3>
+<div class="container">
+  <h3>Ratings</h3>
 
-<p>Updated: {{ updated }}</p>
+  <p class="text-muted">Updated: {{ updated }}</p>
 
 
-{{ ratings|safe }}
+  {{ ratings_summary|safe }}
 
-<div style="font-size: smaller">
-  <p>The home advantage is expressed in terms of the game outcome measure, which is not necesarily points.</p>
-  
-  <p>R<sup>2</sup> measures how well the rating model fits the game outcome measure.  It can range between 0 and 1, where 0 indicates that the outcomes are unrelated to the ratings, and 1 indicates that the ratings completely explain the outcomes.</p>
+  <div style="font-size: smaller; padding-top:1rem">
+    <p>The home advantage is expressed in terms of the game outcome measure, which is not necesarily points.</p>
+    
+    <p>R<sup>2</sup> measures how well the rating model fits the game outcome measure.  It can range between 0 and 1, where 0 indicates that the outcomes are unrelated to the ratings, and 1 indicates that the ratings completely explain the outcomes.</p>
 
-  <p>"Consistency" measures the fraction of past game results (win or loss) that are correctly predicted by the ratings.</p>
+    <p>"Consistency" measures the fraction of past game results (win or loss) that are correctly predicted by the ratings.</p>
 
-  <p>GP = Games Played, GS = Games Scheduled</p>
-  
+    <p>GP = Games Played, GS = Games Scheduled</p>
+    
+  </div>
 </div>
 
-<hr>
+<footer class="border-top" style="padding: 1.0rem 0">
+  <div class="container">
 
-<div style="font-size: small">
+    <small class="text-muted">
+      <p>Score and schedule data courtesy of: <a href="https://www.masseyratings.com/data">Massey Ratings</a></p>
 
-  <p>Score and schedule data courtesy of: <a href="https://www.masseyratings.com/data">Massey Ratings</a></p>
+      <p>Ratings powered by <a href="https://github.com/mcfarljm/pyrate">PyRate</a></p>
 
-  <p>Ratings powered by <a href="https://github.com/mcfarljm/pyrate">PyRate</a></p>
-
-</div>
-
+    </small>
+  </div>
+</footer>
 
 {% endblock %}

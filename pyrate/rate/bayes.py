@@ -54,7 +54,7 @@ class Bayes(rb.RatingSystm):
         for team_node in team_nodes:
             team_node.set_opponent_pointers(team_nodes)
             team_node.update_logp()
-            
+
         self.run_MCMC(team_nodes)
         for team,team_node in zip(self.teams, team_nodes):
             team.rating = team_node.rating
@@ -99,8 +99,8 @@ class Bayes(rb.RatingSystm):
     def predict_win_probability(self, team1, team2, loc=None):
         idx1, idx2 = self.teams.index(team1), self.teams.index(team2)
         return np.mean( [rating_func(rating1, rating2) for rating1, rating2 in zip(self.team_nodes[idx1].rating_samp, self.team_nodes[idx2].rating_samp)] )
-        
-        
+
+
 if __name__ == '__main__':
     import pandas as pd
     import datetime
@@ -108,4 +108,4 @@ if __name__ == '__main__':
     bayes = Bayes(datetime.datetime(2018,1,1))
     bayes.evaluate_predicted_wins(True)
     ratings = pd.DataFrame({'rating':bayes.ratings}, index=[t.name for t in bayes.teams])
-    ratings = ratings.sort_values(by='rating', ascending=False)    
+    ratings = ratings.sort_values(by='rating', ascending=False)

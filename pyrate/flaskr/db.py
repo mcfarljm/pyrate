@@ -50,8 +50,16 @@ def get_most_recent_game(rating):
         result = output.fetchone()
     return result[0]
 
+def get_rating_system_names():
+    """Get list of rating system names"""
+    db = get_db()
+    with db.connect() as conn:
+        output = conn.execute("SELECT name FROM ratings ORDER BY rowid;")
+        results = [r[0] for r in output.fetchall()]
+    return results
+
 def get_rating_systems():
-    """Return list of rating system names"""
+    """Get table with rating systm information"""
     db = get_db()
     df = pd.read_sql_table('ratings', db)
 
@@ -80,7 +88,7 @@ def get_rating_table(rating):
     db = get_db()
 
     query = """
-    SELECT t.rank, t.name, t.rating, t.wins, t.losses, t.strength_of_schedule_past, t.strength_of_schedule_future
+    SELECT t.rank, t.name, t.wins, t.losses, t.rating, t.offense_rank, t.defense_rank, t.strength_of_schedule_past, t.strength_of_schedule_future
     FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
     WHERE r.name = ?;"""
 
@@ -92,7 +100,9 @@ def get_rating_table(rating):
                        'losses':'L',
                        'strength_of_schedule_past':'SoS(p)',
                        'strength_of_schedule_future':'SoS(f)',
-                       'strength_of_schedule_all':'SoS(a)'},
+                       'strength_of_schedule_all':'SoS(a)',
+                       'offense_rank':'Off',
+                       'defense_rank':'Def'},
               inplace=True)
 
     if request.args.get('mode') != 'rating':
@@ -129,7 +139,7 @@ def get_team_data(rating, team_id):
     db = get_db()
 
     query = """
-    SELECT t.rank, t.rating, t.wins, t.losses, t.expected_wins, t.expected_losses
+    SELECT t.rank, t.rating, t.wins, t.losses, t.expected_wins, t.expected_losses, t.offense_rank, t.defense_rank
     FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
     WHERE t.team_id = ? AND r.name = ?;"""
     with db.connect() as conn:

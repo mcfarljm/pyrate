@@ -1,24 +1,29 @@
 {% extends "base.html" %}
 {% block title %}{{ team }}{% endblock %}
+{% block nav_main %}<a class="navbar-brand" href="{{ url_for('rating_system', rating=rating ) }}">{{ rating }}</a>{% endblock %}
+
 {% block content %}
-<h3>{{ team }} ({{ team_data['wins'] }}-{{ team_data['losses'] }})</h3>
 
-<p>Rank: {{ team_data['rank'] }}</p>
+<div class="container">
+  <h3>{{ team }} ({{ team_data['wins'] }}-{{ team_data['losses'] }})</h3>
 
-<p>Expected record: {{ team_data['expected_wins'] }}-{{ team_data['expected_losses'] }}</p>
+  <p>Rank: {{ team_data['rank'] }} (Off: {{ team_data['offense_rank'] }}, Def: {{ team_data['defense_rank']}})</p>
 
-<p><a href="{{ url_for('rating_system', rating=rating ) }}">{{ rating }}</a></p>
+  <p>Expected record: {{ team_data['expected_wins'] }}-{{ team_data['expected_losses'] }}</p>
 
-<p style="font-size: smaller">Legend: OR = Opponent rank,
-  PF = Points for,
-  PA = Points against,
-  NS = Normalized score (amount "earned")</p>
+  <p style="font-size: smaller">Legend: OR = Opponent rank,
+    PF = Points for,
+    PA = Points against,
+    NS = Normalized score (amount "earned")</p>
 
-<p style="font-size: small">Click column name to sort</p>
+  <p style="font-size: small" class="text-muted">Click column name to sort</p>
 
-{{ table|safe }}
+  {{ table|safe }}
+</div>
 
-<h4>Scheduled:</h4>
-{{ scheduled|safe }}
+<div class="container" style="padding-top:2rem">
+  <h4>Scheduled:</h4>
+  {{ scheduled|safe }}
+</div>
 
 {% endblock %}
