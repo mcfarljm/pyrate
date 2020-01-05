@@ -48,8 +48,16 @@ def get_most_recent_game(rating):
         result = output.fetchone()
     return result[0]
 
+def get_rating_system_names():
+    """Get list of rating system names"""
+    db = get_db()
+    with db.connect() as conn:
+        output = conn.execute("SELECT name FROM ratings ORDER BY rowid;")
+        results = [r[0] for r in output.fetchall()]
+    return results
+
 def get_rating_systems():
-    """Return list of rating system names"""
+    """Get table with rating systm information"""
     db = get_db()
     df = pd.read_sql_table('ratings', db)
 

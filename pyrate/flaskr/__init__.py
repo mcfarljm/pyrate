@@ -24,15 +24,18 @@ def create_app(test_config=None):
 
     @app.route('/')
     def home():
-        ratings = db.get_rating_systems()
+        ratings = db.get_rating_system_names()
+        # print("names:", ratings)
+        ratings_summary = db.get_rating_systems()
         updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
         fmts = {'Home Advantage':'{:.1f}',
                 'R<sup>2</sup>':'{:.2f}',
                 'Consistency':'{:.2f}',}
-        return render_template('home.html', updated=updated, ratings=ratings.style.hide_index().format(fmts).set_properties(subset=['Home Advantage','Consistency'], **{'text-align':'center'}).render(escape=False))
+        return render_template('home.html', updated=updated, ratings_summary=ratings_summary.style.hide_index().format(fmts).set_properties(subset=['Home Advantage','Consistency'], **{'text-align':'center'}).render(escape=False))
 
     @app.route('/<rating>')
     def rating_system(rating):
+        ratings = db.get_rating_system_names()
         df = db.get_rating_table(rating)
         updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
         fmts = {'Rating': '{:.2f}',
@@ -43,6 +46,7 @@ def create_app(test_config=None):
 
     @app.route('/<rating>/<team>')
     def team_page(rating, team):
+        ratings = db.get_rating_system_names()
         team_id = db.get_team_id(rating, team)
         df = db.get_games_table(rating, team_id)
         df_sched = db.get_scheduled_games(rating, team_id)
