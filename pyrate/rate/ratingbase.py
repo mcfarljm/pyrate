@@ -293,7 +293,9 @@ class RatingSystem:
                                'wins': sqlt.Integer,
                                'losses': sqlt.Integer,
                                'expected_wins': sqlt.Integer,
-                               'expected_losses': sqlt.Integer})
+                               'expected_losses': sqlt.Integer,
+                               'offense_rank': sqlt.Integer,
+                               'defense_rank': sqlt.Integer})
 
             ### games table
             df = self.double_games.loc[:,['team_id','opponent_id','points','opponent_points','location','date','normalized_score','result','win_probability']]
