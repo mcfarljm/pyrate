@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 
 from . import db
 
@@ -38,10 +38,16 @@ def create_app(test_config=None):
         ratings = db.get_rating_system_names()
         df = db.get_rating_table(rating)
         updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
-        fmts = {'Rating': '{:.2f}',
-                'SoS(p)': '{:.2f}',
-                'SoS(f)': '{:.2f}',
-                'SoS(a)': '{:.2f}'}
+        fmts = {'Rating': '{:.2f}'}
+
+        if request.args.get('mode') == 'rating':
+            fmts.update({
+                'SoS(p)': '{:.1f}',
+                'SoS(f)': '{:.1f}',
+                'SoS(a)': '{:.1f}',
+                'Off': '{:.1f}',
+                'Def': '{:.1f}'})
+            
         return render_template('ratings.html', rating=rating, ratings=ratings, updated=updated, table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').set_uuid('ratingTable').render(escape=False))
 
     @app.route('/<rating>/<team>')

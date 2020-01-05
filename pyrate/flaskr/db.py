@@ -2,8 +2,10 @@ import pandas as pd
 import numpy as np
 import sqlalchemy
 
-from flask import current_app, g, url_for
+from flask import current_app, g, url_for, request
 from flask.cli import with_appcontext
+
+from pyrate.rate.ratingbase import rank_array
 
 
 def get_db():
@@ -86,7 +88,7 @@ def get_rating_table(rating):
     db = get_db()
 
     query = """
-    SELECT t.rank, t.name, t.wins, t.losses, t.rating, t.offense_rank, t.defense_rank, t.strength_of_schedule_past, t.strength_of_schedule_future
+    SELECT t.rank, t.name, t.wins, t.losses, t.rating, t.offense_rank, t.defense_rank, t.offense, t.defense, t.strength_of_schedule_past, t.strength_of_schedule_future
     FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
     WHERE r.name = ?;"""
 
@@ -102,6 +104,28 @@ def get_rating_table(rating):
                        'offense_rank':'Off',
                        'defense_rank':'Def'},
               inplace=True)
+
+    if request.args.get('mode') == 'rating':
+        # Switch in offense/defense rating columns:
+        df.drop(columns=['Off','Def'], inplace=True)
+        df.rename(columns={'offense':'Off','defense':'Def'}, inplace=True)
+    else:
+        # Offense/defense rankings are already retrieved, just drop
+        # the corresopnding rating columns:
+        df.drop(columns=['offense','defense'], inplace=True)
+
+        # Compute SoS ranks:
+        df['SoS(p)'] = rank_array(df['SoS(p)'].values)
+        # Note: originally used custom rank_array implementation that
+        # calls np.argsort, which gets overridden for a series,
+        # causing the custom algorithm not to work.
+        #
+        # There is a tradeoff with how to handle missing values.
+        # Without filling, 'nan' will show up in the table, but that
+        # prevents numerical sort from working.  Filling with a
+        # numerical value enables sorting but is still not ideal.  For
+        # example, add ".fillna(999)" to the end of the call
+        df['SoS(f)'] = df['SoS(f)'].rank(ascending=False, method='min')
 
     func = lambda m: add_link(m, rating)
     df['Team'] = df['Team'].str.replace('(.+)',func)
