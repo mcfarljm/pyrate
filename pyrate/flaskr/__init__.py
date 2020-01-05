@@ -44,7 +44,9 @@ def create_app(test_config=None):
             fmts.update({
                 'SoS(p)': '{:.2f}',
                 'SoS(f)': '{:.2f}',
-                'SoS(a)': '{:.2f}'})
+                'SoS(a)': '{:.2f}',
+                'Off': '{:.2f}',
+                'Def': '{:.2f}'})
             
         return render_template('ratings.html', rating=rating, ratings=ratings, updated=updated, table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').set_uuid('ratingTable').render(escape=False))
 
