@@ -114,8 +114,9 @@ def get_rating_table(rating):
         # There is a tradeoff with how to handle missing values.
         # Without filling, 'nan' will show up in the table, but that
         # prevents numerical sort from working.  Filling with a
-        # numerical value enables sorting but is still not ideal.
-        df['SoS(f)'] = df['SoS(f)'].rank(ascending=False, method='min').fillna(999)
+        # numerical value enables sorting but is still not ideal.  For
+        # example, add ".fillna(999)" to the end of the call
+        df['SoS(f)'] = df['SoS(f)'].rank(ascending=False, method='min')
 
     func = lambda m: add_link(m, rating)
     df['Team'] = df['Team'].str.replace('(.+)',func)
