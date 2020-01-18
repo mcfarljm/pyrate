@@ -2,6 +2,10 @@ import numpy as np
 import pandas as pd
 import scipy.linalg
 import scipy.stats
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
 
 from .ratingbase import RatingSystem
 from . import gom
@@ -279,3 +283,26 @@ class LeastSquares(RatingSystem):
         loo_results = ['W' if gom > 0.0 else 'L' for gom in loo_gom_preds]
 
         self.single_games.loc[self.single_games['train'],'loo_predicted_result'] = loo_results
+
+    def standard_normal_residuals_plot(self):
+        """Plot empirical CDF of residuals on normal probability paper"""
+        def get_ecdf(x):
+            xs = np.sort(x)
+            n = len(x)
+            fhat = np.array([ (i+1.0-0.5)/n for i in range(n)])
+            return xs, fhat
+        xs, fhat = get_ecdf(self.residuals)
+        z = scipy.stats.norm.isf(1.0-fhat)
+        f, ax = plt.subplots()
+        ax.plot(xs, z, 'o')
+        ax.set_xlabel('Residual')
+        ax.set_ylabel('Standard Normal')
+        ax.grid()
+
+    def plot_residuals_vs_predictions(self):
+        f, ax = plt.subplots()
+        preds = self.single_games['GOM'] - self.residuals
+        ax.plot(preds, self.residuals, 'o')
+        ax.set_xlabel('Predicted GOM')
+        ax.set_ylabel('Residual')
+        ax.grid()
