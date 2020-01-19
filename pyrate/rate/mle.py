@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import scipy.optimize
 from scipy.stats import gmean as geometric_mean
+from enum import Enum, auto
 
 from .ratingbase import RatingSystem
 
@@ -24,16 +25,20 @@ def fixed_point_func(r, double_games, get_win_count, get_available_win_array, de
         rjs = ratings_full[df['opponent_index'].values]
         # denom = sum( 1.0 / (ri + rjs) )
         denom = sum( get_available_win_array(df) / (ri + rjs) )
-        if debug:
-            print('avail wins:', i, get_available_win_array(df))
+        # if debug:
+        #     print('avail wins:', i, get_available_win_array(df))
         # num = sum( df['result'] == 'W' )
         num = get_win_count(df)
-        if debug:
-            print('win count:', i, get_win_count(df))
+        # if debug:
+        #     print('win count:', i, get_win_count(df))
         result[i] = num / denom
     if debug:
         print('r output:', r)
     return result
+
+class Method(Enum):
+    WINS = auto()
+    POINTS = auto()
 
 def get_points_for(games):
     return sum(games['points'])
@@ -41,8 +46,15 @@ def get_points_for(games):
 def total_points_array(games):
     return np.array(games['points'] + games['opponent_points'])
 
+def get_win_count(games):
+    return sum(games['result'] == 'W')
+
+def get_game_count(games):
+    """Return number of games per game, which is 1"""
+    return 1.0
+
 class MaximumLikelihood(RatingSystem):
-    def __init__(self, league, tol=1e-8):
+    def __init__(self, league, method=Method.WINS, tol=1e-8):
         """
         Parameters
         ----------
@@ -50,8 +62,9 @@ class MaximumLikelihood(RatingSystem):
             Solution tolerance for ratings
         """
         super().__init__(league)
-        self.homecourt = False
+        self.method = method
 
+        self.homecourt = False
 
         self.fit_ratings(tol)
 
@@ -62,9 +75,18 @@ class MaximumLikelihood(RatingSystem):
         # Copy used in case of modification
         self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ].copy()
 
+        if self.method == Method.WINS:
+           wins_func = get_win_count
+           avail_func = get_game_count
+        elif self.method == Method.POINTS:
+            wins_func = get_points_for
+            avail_func = total_points_array
+        else:
+            raise ValueError
+
         r0 = self._initialize_ratings()
         r0 = np.delete(r0, -1)
-        r = scipy.optimize.fixed_point(fixed_point_func, r0, args=[self.double_games, get_points_for, total_points_array], xtol=tol)
+        r = scipy.optimize.fixed_point(fixed_point_func, r0, args=[self.double_games, wins_func, avail_func], xtol=tol)
 
         r = np.append(r, 1.0)
         # Rescale to geometric mean of 1
