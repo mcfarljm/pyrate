@@ -42,22 +42,29 @@ def total_points_array(games):
     return np.array(games['points'] + games['opponent_points'])
 
 class MaximumLikelihood(RatingSystem):
-    def __init__(self, league):
+    def __init__(self, league, tol=1e-8):
+        """
+        Parameters
+        ----------
+        tol : float
+            Solution tolerance for ratings
+        """
         super().__init__(league)
         self.homecourt = False
 
-        self.fit_ratings()
+
+        self.fit_ratings(tol)
 
     def _initialize_ratings(self):
         return np.ones(len(self.df_teams))
 
-    def fit_ratings(self):
+    def fit_ratings(self, tol):
         # Copy used in case of modification
         self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ].copy()
 
         r0 = self._initialize_ratings()
         r0 = np.delete(r0, -1)
-        r = scipy.optimize.fixed_point(fixed_point_func, r0, args=[self.double_games, get_points_for, total_points_array])
+        r = scipy.optimize.fixed_point(fixed_point_func, r0, args=[self.double_games, get_points_for, total_points_array], xtol=tol)
 
         r = np.append(r, 1.0)
         # Rescale to geometric mean of 1
