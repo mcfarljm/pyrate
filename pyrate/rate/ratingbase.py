@@ -350,7 +350,10 @@ class RatingSystem:
                                'defense_rank': sqlt.Integer})
 
             ### games table
-            df = self.double_games.loc[:,['team_id','opponent_id','points','opponent_points','location','date','normalized_score','result','win_probability']]
+            # Using reindex both selects columns and creates NA
+            # columns if not present (using .loc for this will trigger
+            # a warning if requested columns are not present)
+            df = self.double_games.reindex(columns=['team_id','opponent_id','points','opponent_points','location','date','normalized_score','result','win_probability'])
             df['rating_id'] = rating_id
 
             df.rename(columns={'points':'points_for',
