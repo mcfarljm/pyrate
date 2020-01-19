@@ -17,7 +17,7 @@ def fixed_point_func(logr, double_games, get_win_count, get_available_win_array,
     """
     # Todo: vectorize or rewrite in C?
     if debug:
-        print('logr input:', logr)
+        print('r input:', np.exp(logr))
     result = np.empty(len(logr))
     ratings_full = np.append(np.exp(logr), 1.0)
     for i, logri in enumerate(logr):
@@ -34,16 +34,18 @@ def fixed_point_func(logr, double_games, get_win_count, get_available_win_array,
         result[i] = num / denom
     result = np.log(result)
     if debug:
-        print('logr output:', result)
+        print('r output:', np.exp(result))
     return result
 
 class Wins:
-    def __init__(self):
-        pass
+    def __init__(self, win_value=1.0):
+        if win_value > 1.0 or win_value < 0.0:
+            raise ValueError
+        self.win_value = win_value
     def win_count(self, games):
-        return sum(games['result'] == 'W')
+        return sum(games['result'] == 'W') * self.win_value + sum(games['result']=='L') * (1.0 - self.win_value)
     def game_count_per_game(self, games):
-        return 1.0 
+        return 1.0
 
 class Points:
     def __init__(self):
@@ -80,7 +82,9 @@ class MaximumLikelihood(RatingSystem):
 
         r0 = self._initialize_ratings()
         r0 = np.delete(r0, -1)
-        logr = scipy.optimize.fixed_point(fixed_point_func, np.log(r0), args=[self.double_games, self.method.win_count, self.method.game_count_per_game], xtol=tol)
+        # Have seen problems when using the default solution method,
+        # especially when adjusting the value per win
+        logr = scipy.optimize.fixed_point(fixed_point_func, np.log(r0), args=[self.double_games, self.method.win_count, self.method.game_count_per_game], xtol=tol, method='iteration')
         r = np.exp(logr)
 
         r = np.append(r, 1.0)
