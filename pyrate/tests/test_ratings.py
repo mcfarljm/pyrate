@@ -4,7 +4,7 @@ import numpy as np
 
 from pyrate.rate import ratingbase
 from pyrate.rate import leastsquares
-from pyrate.rate.mle import MaximumLikelihood, Method as MLE_Method
+from pyrate.rate import mle
 from pyrate.rate import gom
 
 class ToyLeagueHyper(unittest.TestCase):
@@ -70,14 +70,14 @@ class ToyLeagueHyper(unittest.TestCase):
             self.assertTrue((base.double_games.loc[i,'train'] == val).all())
     def testMLE(self):
         expected_ratings = [1.36997346, 0.65339296, 0.85526324, 1.30621178]
-        mle = MaximumLikelihood(self.league, method=MLE_Method.POINTS)
-        for rating, expected_rating in zip(mle.df_teams['rating'], expected_ratings):
+        sol = mle.MaximumLikelihood(self.league, method=mle.Method.POINTS)
+        for rating, expected_rating in zip(sol.df_teams['rating'], expected_ratings):
             self.assertAlmostEqual(rating, expected_rating)
 
     def testMLEStrengtOfSchedule(self):
         expected_sos_vals = [0.9238342, 1.152414, 0.9238342, 0.9148056]
-        mle = MaximumLikelihood(self.league, method=MLE_Method.POINTS)
-        for sos_past, expected_sos in zip(mle.df_teams['strength_of_schedule_past'], expected_sos_vals):
+        sol = mle.MaximumLikelihood(self.league, method=mle.Method.POINTS)
+        for sos_past, expected_sos in zip(sol.df_teams['strength_of_schedule_past'], expected_sos_vals):
             self.assertAlmostEqual(sos_past, expected_sos)
 
 class ToyLeagueGames(unittest.TestCase):
