@@ -4,6 +4,7 @@ import numpy as np
 
 from pyrate.rate import ratingbase
 from pyrate.rate import leastsquares
+from pyrate.rate.mle import MaximumLikelihood
 from pyrate.rate import gom
 
 class ToyLeagueHyper(unittest.TestCase):
@@ -67,6 +68,11 @@ class ToyLeagueHyper(unittest.TestCase):
         base = ratingbase.RatingSystem(self.league, test_interval=3)
         for i,val in expected.items():
             self.assertTrue((base.double_games.loc[i,'train'] == val).all())
+    def testMLE(self):
+        expected_ratings = [1.36997346, 0.65339296, 0.85526324, 1.30621178]
+        mle = MaximumLikelihood(self.league)
+        for rating, expected_rating in zip(mle.df_teams['rating'], expected_ratings):
+            self.assertAlmostEqual(rating, expected_rating)
 
 class ToyLeagueGames(unittest.TestCase):
 

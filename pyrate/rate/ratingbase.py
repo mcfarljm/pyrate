@@ -178,14 +178,16 @@ class RatingSystem:
             print('CV log lhood: {:.3f}'.format(self.log_likelihood(exclude_train=True)))
         
 
-    def store_ratings(self, ratings, offense, defense):
+    def store_ratings(self, ratings, offense=None, defense=None):
         """After child method is called, organize rating data into DataFrame"""
         self.df_teams['rating'] = ratings
         self.df_teams['rank'] = rank_array(ratings)
-        self.df_teams['offense'] = offense
-        self.df_teams['defense'] = defense
-        self.df_teams['offense_rank'] = rank_array(offense)
-        self.df_teams['defense_rank'] = rank_array(defense)
+        if offense is not None:
+            self.df_teams['offense'] = offense
+            self.df_teams['offense_rank'] = rank_array(offense)
+        if defense is not None:
+            self.df_teams['defense'] = defense
+            self.df_teams['defense_rank'] = rank_array(defense)
 
         self.get_strength_of_schedule()
 
