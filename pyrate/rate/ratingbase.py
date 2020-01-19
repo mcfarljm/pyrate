@@ -325,7 +325,8 @@ class RatingSystem:
             # a new arbitrary rating_id before adding the data)
             n_games = len(self.double_games) // 2
             n_scheduled = len(self.double_schedule) // 2
-            conn.execute('UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=?, games_played = ?, games_scheduled = ? WHERE rating_id = ?;', (self.home_adv, self.Rsquared, self.consistency, n_games, n_scheduled, rating_id))
+            Rsquared = self.Rsquared if hasattr(self, 'Rsquared') else None
+            conn.execute('UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=?, games_played = ?, games_scheduled = ? WHERE rating_id = ?;', (self.home_adv, Rsquared, self.consistency, n_games, n_scheduled, rating_id))
 
             ### teams table
             df = self.df_teams.copy()

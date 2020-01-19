@@ -1,5 +1,6 @@
 """Maximum likelihood ratings"""
 import numpy as np
+import pandas as pd
 import scipy.optimize
 from scipy.stats import gmean as geometric_mean
 
@@ -43,6 +44,7 @@ def total_points_array(games):
 class MaximumLikelihood(RatingSystem):
     def __init__(self, league):
         super().__init__(league)
+        self.homecourt = False
 
         self.fit_ratings()
 
@@ -60,7 +62,22 @@ class MaximumLikelihood(RatingSystem):
         r = np.append(r, 1.0)
         # Rescale to geometric mean of 1
         r /= geometric_mean(r)
+
+        self.home_adv = None
+
         self.store_ratings(r)
+        self.store_predictions()
 
     def strength_of_schedule(self, ratings):
         return geometric_mean(ratings)
+
+    def predict_win_probability(self, games):
+        """Predict win probability for each game in DataFrame"""
+        ri = self.df_teams.loc[games['team_id'],'rating'].values
+        p = ri / ( ri + self.df_teams.loc[games['opponent_id'],'rating'].values )
+        # Convert to Series for convenience
+        return pd.Series(p, index=games.index)
+
+    def predict_result(self, games):
+        p = self.predict_win_probability(games)
+        return p.apply(lambda pi: 'W' if pi > 0.5 else 'L')
