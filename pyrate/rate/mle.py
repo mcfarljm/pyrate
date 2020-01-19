@@ -1,6 +1,7 @@
 """Maximum likelihood ratings"""
 import numpy as np
 import scipy.optimize
+from scipy.stats import gmean as geometric_mean
 
 from .ratingbase import RatingSystem
 
@@ -58,5 +59,8 @@ class MaximumLikelihood(RatingSystem):
 
         r = np.append(r, 1.0)
         # Rescale to geometric mean of 1
-        r /= np.exp( np.mean(np.log(r)) )
+        r /= geometric_mean(r)
         self.store_ratings(r)
+
+    def strength_of_schedule(self, ratings):
+        return geometric_mean(ratings)

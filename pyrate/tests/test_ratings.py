@@ -74,6 +74,12 @@ class ToyLeagueHyper(unittest.TestCase):
         for rating, expected_rating in zip(mle.df_teams['rating'], expected_ratings):
             self.assertAlmostEqual(rating, expected_rating)
 
+    def testMLEStrengtOfSchedule(self):
+        expected_sos_vals = [0.9238342, 1.152414, 0.9238342, 0.9148056]
+        mle = MaximumLikelihood(self.league)
+        for sos_past, expected_sos in zip(mle.df_teams['strength_of_schedule_past'], expected_sos_vals):
+            self.assertAlmostEqual(sos_past, expected_sos)
+
 class ToyLeagueGames(unittest.TestCase):
 
     def setUp(self):

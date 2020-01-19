@@ -284,6 +284,9 @@ class LeastSquares(RatingSystem):
 
         self.single_games.loc[self.single_games['train'],'loo_predicted_result'] = loo_results
 
+    def strength_of_schedule(self, ratings):
+        return np.mean(ratings)
+
     def standard_normal_residuals_plot(self):
         """Plot empirical CDF of residuals on normal probability paper"""
         def get_ecdf(x):

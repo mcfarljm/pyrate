@@ -194,6 +194,9 @@ class RatingSystem:
     def get_strength_of_schedule(self):
         """Compute strength of schedule as average of opponent rating
 
+        Call into child class method to compute schedule strength from
+        array of opponent ratings.
+
         For now, does not account for home court"""
         self.df_teams['strength_of_schedule_past'] = np.nan
         self.df_teams['strength_of_schedule_future'] = np.nan
@@ -201,12 +204,12 @@ class RatingSystem:
         for team_id,team in self.df_teams.iterrows():
             games = self.double_games[self.double_games['team_id'] == team_id]
             schedule = self.double_schedule[self.double_schedule['team_id'] == team_id]
-            self.df_teams.at[team_id,'strength_of_schedule_past'] = np.mean(self.df_teams.loc[games['opponent_id'],'rating'])
+            self.df_teams.at[team_id,'strength_of_schedule_past'] = self.strength_of_schedule(self.df_teams.loc[games['opponent_id'],'rating'])
             if len(schedule) > 0:
-                self.df_teams.at[team_id,'strength_of_schedule_future'] = np.mean(self.df_teams.loc[schedule['opponent_id'],'rating'])
+                self.df_teams.at[team_id,'strength_of_schedule_future'] = self.strength_of_schedule(self.df_teams.loc[schedule['opponent_id'],'rating'])
             else:
                 self.df_teams.at[team_id,'strength_of_schedule_future'] = np.nan
-            self.df_teams.at[team_id,'strength_of_schedule_all'] = np.mean(self.df_teams.loc[np.concatenate((games['opponent_id'],schedule['opponent_id'])),'rating'])
+            self.df_teams.at[team_id,'strength_of_schedule_all'] = self.strength_of_schedule(self.df_teams.loc[np.concatenate((games['opponent_id'],schedule['opponent_id'])),'rating'])
 
     def display_ratings(self, n=10):
         print(self.df_teams.sort_values(by='rating', ascending=False).head(n))
