@@ -7,24 +7,25 @@ from enum import Enum, auto
 
 from .ratingbase import RatingSystem
 
-def fixed_point_func(r, double_games, get_win_count, get_available_win_array, debug=False):
-    """Function h(r) = r
+def fixed_point_func(logr, double_games, get_win_count, get_available_win_array, debug=False):
+    """Function h(logr) = logr
 
     Parameters
     ----------
-    r : array
-        Length is nteam-1, so that the last rating is assumed to be 1
+    logr : array
+        Log of rating vector.  Length is nteam-1, so that the last
+        rating is assumed to be 1
     """
     # Todo: vectorize or rewrite in C?
     if debug:
-        print('r input:', r)
-    result = np.empty(len(r))
-    ratings_full = np.append(r, 1.0)
-    for i, ri in enumerate(r):
+        print('logr input:', logr)
+    result = np.empty(len(logr))
+    ratings_full = np.append(np.exp(logr), 1.0)
+    for i, logri in enumerate(logr):
         df = double_games[double_games['team_index'] == i]
         rjs = ratings_full[df['opponent_index'].values]
         # denom = sum( 1.0 / (ri + rjs) )
-        denom = sum( get_available_win_array(df) / (ri + rjs) )
+        denom = sum( get_available_win_array(df) / (np.exp(logri) + rjs) )
         # if debug:
         #     print('avail wins:', i, get_available_win_array(df))
         # num = sum( df['result'] == 'W' )
@@ -32,8 +33,9 @@ def fixed_point_func(r, double_games, get_win_count, get_available_win_array, de
         # if debug:
         #     print('win count:', i, get_win_count(df))
         result[i] = num / denom
+    result = np.log(result)
     if debug:
-        print('r output:', r)
+        print('logr output:', result)
     return result
 
 class Method(Enum):
@@ -86,7 +88,8 @@ class MaximumLikelihood(RatingSystem):
 
         r0 = self._initialize_ratings()
         r0 = np.delete(r0, -1)
-        r = scipy.optimize.fixed_point(fixed_point_func, r0, args=[self.double_games, wins_func, avail_func], xtol=tol)
+        logr = scipy.optimize.fixed_point(fixed_point_func, np.log(r0), args=[self.double_games, wins_func, avail_func], xtol=tol)
+        r = np.exp(logr)
 
         r = np.append(r, 1.0)
         # Rescale to geometric mean of 1
