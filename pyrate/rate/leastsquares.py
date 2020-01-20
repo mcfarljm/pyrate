@@ -213,7 +213,7 @@ class LeastSquares(RatingSystem):
             pseudo_pf -= 0.5 * self.home_adv * double_games['location'].map(loc_map)
         rhs = ratings[double_games['team_index'].values] - pseudo_pf
 
-        defense, _ = fit_linear_least_squares(X, rhs, weights=weights)
+        defense, _ = fit_linear_least_squares(X, rhs.values, weights=weights)
         # At this point, defense has an implied normalization carried over from
         # ratings. We can change this and normalize average defense to 0, and
         # after applying the same normalization, offense will be interpreted as
