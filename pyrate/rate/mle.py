@@ -6,7 +6,7 @@ from scipy.stats import gmean as geometric_mean
 
 from .ratingbase import RatingSystem
 
-def fixed_point_func(logr, double_games, get_win_count, get_available_win_array, debug=False):
+def fixed_point_func(logr, double_games, get_win_count, get_available_win_array, func_count=[0], debug=True):
     """Function h(logr) = logr
 
     Parameters
@@ -35,6 +35,7 @@ def fixed_point_func(logr, double_games, get_win_count, get_available_win_array,
     result = np.log(result)
     if debug:
         print('r output:', np.exp(result))
+    func_count[0] += 1
     return result
 
 class Wins:
@@ -95,10 +96,13 @@ class MaximumLikelihood(RatingSystem):
 
         r0 = self._initialize_ratings()
         r0 = np.delete(r0, -1)
+        func_count = [0]
         # Have seen problems when using the default solution method,
         # especially when adjusting the value per win
-        logr = scipy.optimize.fixed_point(fixed_point_func, np.log(r0), args=[self.double_games, self.method.win_count, self.method.game_count_per_game], xtol=tol, method='iteration')
+        logr = scipy.optimize.fixed_point(fixed_point_func, np.log(r0), args=[self.double_games, self.method.win_count, self.method.game_count_per_game, func_count], xtol=tol, method='iteration', maxiter=1000)
         r = np.exp(logr)
+        self.function_count = func_count[0]
+        print('function calls:', self.function_count)
 
         r = np.append(r, 1.0)
         # Rescale to geometric mean of 1
