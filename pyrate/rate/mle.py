@@ -74,7 +74,20 @@ class MaximumLikelihood(RatingSystem):
         self.fit_ratings(tol)
 
     def _initialize_ratings(self):
+        # Just start with ones:
         return np.ones(len(self.df_teams))
+
+        # Start with plain win/loss ratio:
+        # return np.array(self.df_teams['wins'] / self.df_teams['losses'])
+
+        # Start with "modified" win/loss ratio:
+        # r0 = np.ones(len(self.df_teams))
+        # for i in range(len(self.df_teams)):
+        #     df = self.double_games[self.double_games['team_index'] == i]
+        #     w = self.method.win_count(df)
+        #     l = len(df) - w
+        #     r0[i] = w/l
+        # return r0
 
     def fit_ratings(self, tol):
         # Copy used in case of modification
