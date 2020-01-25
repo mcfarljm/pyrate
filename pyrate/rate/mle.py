@@ -19,7 +19,7 @@ def fixed_point_func(logr, double_games, get_win_count, get_available_win_array,
     if debug:
         print('r input:', np.exp(logr))
     result = np.empty(len(logr))
-    ratings_full = np.append(np.exp(logr), 1.0)
+    ratings_full = np.exp(logr)
     for i, logri in enumerate(logr):
         df = double_games[double_games['team_index'] == i]
         rjs = ratings_full[df['opponent_index'].values]
@@ -76,35 +76,40 @@ class MaximumLikelihood(RatingSystem):
 
     def _initialize_ratings(self):
         # Just start with ones:
-        return np.ones(len(self.df_teams))
+        # return np.ones(len(self.df_teams))
 
         # Start with plain win/loss ratio:
         # return np.array(self.df_teams['wins'] / self.df_teams['losses'])
 
         # Start with "modified" win/loss ratio:
-        # r0 = np.ones(len(self.df_teams))
-        # for i in range(len(self.df_teams)):
-        #     df = self.double_games[self.double_games['team_index'] == i]
-        #     w = self.method.win_count(df)
-        #     l = len(df) - w
-        #     r0[i] = w/l
-        # return r0
+        r0 = np.ones(len(self.df_teams))
+        for i in range(len(self.df_teams)):
+            df = self.double_games[self.double_games['team_index'] == i]
+            w = self.method.win_count(df)
+            l = len(df) - w
+            r0[i] = w/l
+        return r0
 
     def fit_ratings(self, tol):
         # Copy used in case of modification
         self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ].copy()
 
         r0 = self._initialize_ratings()
-        r0 = np.delete(r0, -1)
         func_count = [0]
+        # Note that if all ratings are treated as variables, there is
+        # not a unique solution because there is an arbitrary scale.
+        # This could be resolved by fixing the last rating to 1 (say).
+        # However, tests indicate that convergence is much faster if
+        # all ratings are allowed to "float".
+        #
         # Have seen problems when using the default solution method,
-        # especially when adjusting the value per win
+        # especially when adjusting the value per win (this was prior
+        # to floating the last rating).
         logr = scipy.optimize.fixed_point(fixed_point_func, np.log(r0), args=[self.double_games, self.method.win_count, self.method.game_count_per_game, func_count], xtol=tol, method='iteration', maxiter=1000)
         r = np.exp(logr)
         self.function_count = func_count[0]
         print('function calls:', self.function_count)
 
-        r = np.append(r, 1.0)
         # Rescale to geometric mean of 1
         r /= geometric_mean(r)
 
