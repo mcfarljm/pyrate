@@ -48,6 +48,20 @@ class Wins:
     def game_count_per_game(self, games):
         return 1.0
 
+class WeibullWins:
+    """Construct win function from Weibull CDF curve"""
+    def __init__(self, shape, scale):
+        self.shape = shape
+        self.scale = scale
+    def cdf(self, x):
+        return 1.0 - np.exp( -(x/self.scale)**self.shape )
+    def __call__(self, x):
+        return 0.5 + np.sign(x) * 0.5*self.cdf(np.abs(x))
+    def win_count(self, games):
+        return sum( self( np.array( games['points'] - games['opponent_points'] ) ) )
+    def game_count_per_game(self, games):
+        return 1.0
+
 class Points:
     def __init__(self):
         pass
@@ -75,7 +89,10 @@ class MaximumLikelihood(RatingSystem):
         self.fit_ratings(tol)
 
     def _initialize_ratings(self):
-        if isinstance(self.method, Wins):
+        if isinstance(self.method, Points):
+            # Just start with ones:
+            return np.ones(len(self.df_teams))
+        else:
             # Start with "modified" win/loss ratio:
             r0 = np.ones(len(self.df_teams))
             for i in range(len(self.df_teams)):
@@ -84,9 +101,6 @@ class MaximumLikelihood(RatingSystem):
                 l = len(df) - w
                 r0[i] = w/l
             return r0
-        else:
-            # Just start with ones:
-            return np.ones(len(self.df_teams))
 
     def fit_ratings(self, tol):
         # Copy used in case of modification
