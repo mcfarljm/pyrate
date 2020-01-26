@@ -68,13 +68,13 @@ def get_rating_systems():
     df['name'] = df['name'].str.replace('(.+)', add_rating_link)
 
     df.rename(columns={'name':'League',
-                       'home_advantage':'Home Advantage',
+                       'home_advantage':'Home Adv',
                        'r_squared':'R<sup>2</sup>',
-                       'consistency':'Consistency',
+                       'consistency':'Consist',
                        'games_played':'GP',
                        'games_scheduled':'GS'},
               inplace=True)
-    df = df[['League','Through','Home Advantage','R<sup>2</sup>','Consistency','GP','GS']]
+    df = df[['League','Through','Home Adv','R<sup>2</sup>','Consist','GP','GS']]
 
     return df
 

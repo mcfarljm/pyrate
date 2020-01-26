@@ -28,10 +28,10 @@ def create_app(test_config=None):
         # print("names:", ratings)
         ratings_summary = db.get_rating_systems()
         updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
-        fmts = {'Home Advantage':'{:.1f}',
+        fmts = {'Home Adv':'{:.1f}',
                 'R<sup>2</sup>':'{:.2f}',
-                'Consistency':'{:.2f}',}
-        return render_template('home.html', ratings=ratings, updated=updated, ratings_summary=ratings_summary.style.hide_index().format(fmts).set_properties(subset=['Home Advantage','Consistency'], **{'text-align':'center'}).render(escape=False))
+                'Consist':'{:.2f}',}
+        return render_template('home.html', ratings=ratings, updated=updated, ratings_summary=ratings_summary.style.hide_index().format(fmts).set_properties(subset=['Home Adv','Consist'], **{'text-align':'center'}).render(escape=False))
 
     @app.route('/<rating>')
     def rating_system(rating):
