@@ -6,7 +6,7 @@ from scipy.stats import gmean as geometric_mean
 
 from .ratingbase import RatingSystem
 
-def fixed_point_func(logr, double_games, get_win_count, get_available_win_array, func_count=[0], debug=True):
+def fixed_point_func(logr, double_games, get_win_count, get_available_win_array, func_count=[0], debug=False):
     """Function h(logr) = logr
 
     Parameters
@@ -71,7 +71,7 @@ class Points:
         return np.array(games['points'] + games['opponent_points'])
 
 class MaximumLikelihood(RatingSystem):
-    def __init__(self, league, method=Wins(), tol=1e-8):
+    def __init__(self, league, method=Wins(), tol=1e-8, train_interval=None, test_interval=None):
         """
         Parameters
         ----------
@@ -81,11 +81,12 @@ class MaximumLikelihood(RatingSystem):
         tol : float
             Solution tolerance for ratings
         """
-        super().__init__(league)
+        super().__init__(league, train_interval=train_interval, test_interval=test_interval)
         self.method = method
 
         self.homecourt = False
 
+        self.double_games_train = self.double_games[self.double_games['train']]
         self.fit_ratings(tol)
 
     def _initialize_ratings(self):
@@ -96,7 +97,7 @@ class MaximumLikelihood(RatingSystem):
             # Start with "modified" win/loss ratio:
             r0 = np.ones(len(self.df_teams))
             for i in range(len(self.df_teams)):
-                df = self.double_games[self.double_games['team_index'] == i]
+                df = self.double_games_train[self.double_games_train['team_index'] == i]
                 w = self.method.win_count(df)
                 l = len(df) - w
                 r0[i] = w/l
@@ -117,7 +118,7 @@ class MaximumLikelihood(RatingSystem):
         # Have seen problems when using the default solution method,
         # especially when adjusting the value per win (this was prior
         # to floating the last rating).
-        logr = scipy.optimize.fixed_point(fixed_point_func, np.log(r0), args=[self.double_games, self.method.win_count, self.method.game_count_per_game, func_count], xtol=tol, method='iteration', maxiter=1000)
+        logr = scipy.optimize.fixed_point(fixed_point_func, np.log(r0), args=[self.double_games_train, self.method.win_count, self.method.game_count_per_game, func_count], xtol=tol, method='iteration', maxiter=1000)
         r = np.exp(logr)
         self.function_count = func_count[0]
         print('function calls:', self.function_count)
