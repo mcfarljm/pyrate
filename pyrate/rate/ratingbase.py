@@ -60,7 +60,6 @@ class League:
         self.double_games = df_games[~unplayed].copy()
         self.double_schedule = df_games[unplayed].copy()
         self.double_games = self.double_games.astype({'points':'int32', 'opponent_points':'int32'})
-        self.double_games['train'] = True
 
         def get_wl(row):
             if row['points'] > row['opponent_points']:
@@ -121,7 +120,26 @@ class League:
 
 
 class RatingSystem:
-    def __init__(self, league):
+    def __init__(self, league, train_interval=None, test_interval=None):
+        """Base class for rating system
+        
+        For train/test split, only one of train_interval or
+        test_interval may be provided.
+
+        Parameters
+        ----------
+        league : League instance
+        train_interval : int or None
+            Interval used to define train/test split of games.  Use a
+            value of 1 to train on every game.  A value of 2 will
+            train on every other game, etc.
+        test_interval : int or None
+            Interval used to define train/test split of games.  Use a
+            value of 2 to test on every other game, 3 to test on every
+            3rd game, etc.
+        """
+        if train_interval and test_interval:
+            raise ValueError
         self.df_teams = league.teams
         # The double_games table may be modified by the fitting
         # routine, so we let the fitting routine store single_games
@@ -129,6 +147,18 @@ class RatingSystem:
         self.double_games = league.double_games
         self.double_schedule = league.double_schedule
         self.single_schedule = self.double_schedule[ self.double_schedule['team_id'] < self.double_schedule['opponent_id'] ]
+
+        # Flagging the train/test set is a little tricky because we
+        # work with double games.  To handle this, we can set it based
+        # on the DataFrame index, which is unique by game.
+        if train_interval:
+            self.double_games['train'] = False
+            self.double_games.loc[self.double_games.index.unique()[::train_interval], 'train'] = True
+        elif test_interval:
+            self.double_games['train'] = True
+            self.double_games.loc[self.double_games.index.unique()[::test_interval], 'train'] = False
+        else:
+            self.double_games['train'] = True
 
     def summarize(self):
         print('{} played games'.format(len(self.double_games)//2))

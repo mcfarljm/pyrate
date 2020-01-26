@@ -56,6 +56,18 @@ class ToyLeagueHyper(unittest.TestCase):
         self.assertEqual(correct, 3)
         self.assertEqual(count, 5)
 
+    def testTrainInterval(self):
+        expected = {1: True, 2: False, 3: False, 4:True, 5:False}
+        base = ratingbase.RatingSystem(self.league, train_interval=3)
+        for i,val in expected.items():
+            self.assertTrue((base.double_games.loc[i,'train'] == val).all())
+
+    def testTestInterval(self):
+        expected = {1: False, 2: True, 3: True, 4:False, 5:True}
+        base = ratingbase.RatingSystem(self.league, test_interval=3)
+        for i,val in expected.items():
+            self.assertTrue((base.double_games.loc[i,'train'] == val).all())
+
 class ToyLeagueGames(unittest.TestCase):
 
     def setUp(self):
@@ -134,6 +146,18 @@ class ToyLeagueGames(unittest.TestCase):
         lsq = leastsquares.LeastSquares(self.league, weight_function=weight_func)
         for rating, expected_rating in zip(lsq.df_teams['rating'], expected_ratings):
             self.assertAlmostEqual(rating, expected_rating)
+
+    def testTrainInterval(self):
+        expected = {0: True, 1: False, 2: False, 3:True, 4:False}
+        base = ratingbase.RatingSystem(self.league, train_interval=3)
+        for i,val in expected.items():
+            self.assertTrue((base.double_games.loc[i,'train'] == val).all())
+
+    def testTestInterval(self):
+        expected = {0: False, 1: True, 2: True, 3:False, 4:True}
+        base = ratingbase.RatingSystem(self.league, test_interval=3)
+        for i,val in expected.items():
+            self.assertTrue((base.double_games.loc[i,'train'] == val).all())
 
 class LeaveOneOutPredictions(unittest.TestCase):
 

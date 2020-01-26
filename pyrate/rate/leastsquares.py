@@ -51,7 +51,7 @@ def test_weight_func2(games):
     return weights
 
 class LeastSquares(RatingSystem):
-    def __init__(self, league, homecourt=False, game_outcome_measure=None, weight_function=None):
+    def __init__(self, league, homecourt=False, game_outcome_measure=None, weight_function=None, train_interval=None, test_interval=None):
         """
         Parameters
         ----------
@@ -65,7 +65,7 @@ class LeastSquares(RatingSystem):
             Function that accepts a games data frame and ratings
             array, and returns an array of weights
         """
-        super().__init__(league)
+        super().__init__(league, train_interval=train_interval, test_interval=test_interval)
         self.homecourt = homecourt
         if game_outcome_measure is None:
             self.gom = gom.PointDifference()
