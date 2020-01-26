@@ -58,6 +58,7 @@ def create_app(test_config=None):
         df_sched = db.get_scheduled_games(rating, team_id)
 
         td = db.get_team_data(rating, team_id)
+        td['rating'] = round(td['rating'],2)
 
         fmts = {'Date': lambda x: "{}".format(x.strftime('%Y-%m-%d')),
                 'NS': '{:.0f}'}

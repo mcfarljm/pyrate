@@ -7,7 +7,10 @@
 <div class="container">
   <h3>{{ team }} ({{ team_data['wins'] }}-{{ team_data['losses'] }})</h3>
 
-  <p>Rank: {{ team_data['rank'] }} (Off: {{ team_data['offense_rank'] }}, Def: {{ team_data['defense_rank']}})</p>
+  <p>Rank: {{ team_data['rank'] }} (Off: {{ team_data['offense_rank'] }}, Def: {{ team_data['defense_rank']}})
+    <br>
+    <span style="font-size: smaller">Rating: {{ team_data['rating'] }}</span>
+  </p> 
 
   <p>Expected record: {{ team_data['expected_wins'] }}-{{ team_data['expected_losses'] }}</p>
 

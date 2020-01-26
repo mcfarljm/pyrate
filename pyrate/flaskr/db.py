@@ -161,6 +161,10 @@ def get_team_data(rating, team_id):
         output = conn.execute(query, (team_id, rating))
         result = output.fetchone()    
 
+    # Converting result to a dict makes it editable (and dict works
+    # better than pd.Series here because it doesn't coerce all values
+    # into same format)
+    result = dict(zip(result.keys(), result))
     return result
 
 def get_games_table(rating, team_id):
