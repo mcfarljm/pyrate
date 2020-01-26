@@ -61,6 +61,11 @@ def create_app(test_config=None):
 
         fmts = {'Date': lambda x: "{}".format(x.strftime('%Y-%m-%d')),
                 'NS': '{:.0f}'}
+        # Try to be smart about formatting for NS.  When using just
+        # wins, the values are small and .0f is not good.
+        if max(df['NS'].abs()) < 4:
+            fmts['NS'] = '{:.2f}'
+
         fmts_sched = fmts.copy() # 'Result' format is different
         fmts_sched['Result'] = '{:.0f}%'
 
