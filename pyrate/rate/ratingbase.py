@@ -173,6 +173,9 @@ class RatingSystem:
         if not self.double_games['train'].all():
             correct, total = self.evaluate_predicted_wins(exclude_train=True)
             print('CV consistency: {:.3f}'.format(correct/total))
+        print('Log lhood: {:.3f}'.format(self.log_likelihood()))
+        if not self.double_games['train'].all():
+            print('CV log lhood: {:.3f}'.format(self.log_likelihood(exclude_train=True)))
         
 
     def store_ratings(self, ratings, offense, defense):
@@ -233,6 +236,15 @@ class RatingSystem:
         total = sum(idx) // 2
 
         return correct, total
+
+    def log_likelihood(self, exclude_train=False):
+        """Evaluate log of likelihood of outcomes based on predicted win probabilities"""
+        games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ]
+        if exclude_train:
+            games = games[~ games['train']]
+
+        pvals = games.apply(lambda r: r['win_probability'] if r['result']=='W' else 1.0 - r['win_probability'], axis=1)
+        return sum(np.log(pvals))
 
     def evaluate_coverage_probability(self, exclude_train=False):
         pvals = np.array([0.5, 0.6, 0.7, 0.8, 0.9])
