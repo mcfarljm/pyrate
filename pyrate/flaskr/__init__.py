@@ -67,10 +67,12 @@ def create_app(test_config=None):
         def color_outcome(s):
             return ['color: green' if v=='W' else 'color: red' for v in s]
 
-        games = df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero').set_uuid('gameTable').render(escape=False)
+        games = df.style.hide_index().format(fmts).apply(color_outcome, subset='Result').set_uuid('gameTable')
+        if 'NS' in df:
+            games = games.set_properties(subset=['NS'], **{'text-align':'center'}).bar(subset=['NS'], align='zero') 
         scheduled = df_sched.style.hide_index().format(fmts_sched).set_uuid('scheduleTable').render(escape=False)
         
-        return render_template('team.html', rating=rating, team=team, ratings=ratings, team_data=td, table=games, scheduled=scheduled)
+        return render_template('team.html', rating=rating, team=team, ratings=ratings, team_data=td, table=games.render(escape=False), scheduled=scheduled)
 
 
     db.init_app(app)

@@ -127,6 +127,11 @@ def get_rating_table(rating):
         # example, add ".fillna(999)" to the end of the call
         df['SoS(f)'] = df['SoS(f)'].rank(ascending=False, method='min')
 
+    if any(df['Off'].isnull()):
+        df.drop(columns='Off', inplace=True)
+    if any(df['Def'].isnull()):
+        df.drop(columns='Def', inplace=True)
+
     func = lambda m: add_link(m, rating)
     df['Team'] = df['Team'].str.replace('(.+)',func)
     
@@ -179,6 +184,9 @@ def get_games_table(rating, team_id):
                        'points_against':'PA',
                        'normalized_score':'NS'},
               inplace=True)
+
+    if any(df['NS'].isnull()):
+        df.drop(columns='NS', inplace=True)
 
     df.sort_values(by='Date', inplace=True)
 

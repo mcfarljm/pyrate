@@ -178,19 +178,24 @@ class RatingSystem:
             print('CV log lhood: {:.3f}'.format(self.log_likelihood(exclude_train=True)))
         
 
-    def store_ratings(self, ratings, offense, defense):
+    def store_ratings(self, ratings, offense=None, defense=None):
         """After child method is called, organize rating data into DataFrame"""
         self.df_teams['rating'] = ratings
         self.df_teams['rank'] = rank_array(ratings)
-        self.df_teams['offense'] = offense
-        self.df_teams['defense'] = defense
-        self.df_teams['offense_rank'] = rank_array(offense)
-        self.df_teams['defense_rank'] = rank_array(defense)
+        if offense is not None:
+            self.df_teams['offense'] = offense
+            self.df_teams['offense_rank'] = rank_array(offense)
+        if defense is not None:
+            self.df_teams['defense'] = defense
+            self.df_teams['defense_rank'] = rank_array(defense)
 
         self.get_strength_of_schedule()
 
     def get_strength_of_schedule(self):
         """Compute strength of schedule as average of opponent rating
+
+        Call into child class method to compute schedule strength from
+        array of opponent ratings.
 
         For now, does not account for home court"""
         self.df_teams['strength_of_schedule_past'] = np.nan
@@ -199,12 +204,12 @@ class RatingSystem:
         for team_id,team in self.df_teams.iterrows():
             games = self.double_games[self.double_games['team_id'] == team_id]
             schedule = self.double_schedule[self.double_schedule['team_id'] == team_id]
-            self.df_teams.at[team_id,'strength_of_schedule_past'] = np.mean(self.df_teams.loc[games['opponent_id'],'rating'])
+            self.df_teams.at[team_id,'strength_of_schedule_past'] = self.strength_of_schedule(self.df_teams.loc[games['opponent_id'],'rating'])
             if len(schedule) > 0:
-                self.df_teams.at[team_id,'strength_of_schedule_future'] = np.mean(self.df_teams.loc[schedule['opponent_id'],'rating'])
+                self.df_teams.at[team_id,'strength_of_schedule_future'] = self.strength_of_schedule(self.df_teams.loc[schedule['opponent_id'],'rating'])
             else:
                 self.df_teams.at[team_id,'strength_of_schedule_future'] = np.nan
-            self.df_teams.at[team_id,'strength_of_schedule_all'] = np.mean(self.df_teams.loc[np.concatenate((games['opponent_id'],schedule['opponent_id'])),'rating'])
+            self.df_teams.at[team_id,'strength_of_schedule_all'] = self.strength_of_schedule(self.df_teams.loc[np.concatenate((games['opponent_id'],schedule['opponent_id'])),'rating'])
 
     def display_ratings(self, n=10):
         print(self.df_teams.sort_values(by='rating', ascending=False).head(n))
@@ -320,7 +325,8 @@ class RatingSystem:
             # a new arbitrary rating_id before adding the data)
             n_games = len(self.double_games) // 2
             n_scheduled = len(self.double_schedule) // 2
-            conn.execute('UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=?, games_played = ?, games_scheduled = ? WHERE rating_id = ?;', (self.home_adv, self.Rsquared, self.consistency, n_games, n_scheduled, rating_id))
+            Rsquared = self.Rsquared if hasattr(self, 'Rsquared') else None
+            conn.execute('UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=?, games_played = ?, games_scheduled = ? WHERE rating_id = ?;', (self.home_adv, Rsquared, self.consistency, n_games, n_scheduled, rating_id))
 
             ### teams table
             df = self.df_teams.copy()
@@ -344,7 +350,10 @@ class RatingSystem:
                                'defense_rank': sqlt.Integer})
 
             ### games table
-            df = self.double_games.loc[:,['team_id','opponent_id','points','opponent_points','location','date','normalized_score','result','win_probability']]
+            # Using reindex both selects columns and creates NA
+            # columns if not present (using .loc for this will trigger
+            # a warning if requested columns are not present)
+            df = self.double_games.reindex(columns=['team_id','opponent_id','points','opponent_points','location','date','normalized_score','result','win_probability'])
             df['rating_id'] = rating_id
 
             df.rename(columns={'points':'points_for',
