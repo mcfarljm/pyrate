@@ -6,7 +6,7 @@ from scipy.stats import gmean as geometric_mean
 
 from .ratingbase import RatingSystem
 
-def fixed_point_func(logr, double_games, get_win_count, get_available_win_array, func_count=[0], debug=False):
+def fixed_point_func(logr, double_games, get_win_count, get_available_win_array, func_count=[0], verbosity=0):
     """Function h(logr) = logr
 
     Parameters
@@ -16,7 +16,7 @@ def fixed_point_func(logr, double_games, get_win_count, get_available_win_array,
         rating is assumed to be 1
     """
     # Todo: vectorize or rewrite in C?
-    if debug:
+    if verbosity >= 2:
         print('r input:', np.exp(logr))
     result = np.empty(len(logr))
     ratings_full = np.exp(logr)
@@ -33,7 +33,7 @@ def fixed_point_func(logr, double_games, get_win_count, get_available_win_array,
         #     print('win count:', i, get_win_count(df))
         result[i] = num / denom
     result = np.log(result)
-    if debug:
+    if verbosity >= 2:
         print('r output:', np.exp(result))
     func_count[0] += 1
     return result
@@ -71,7 +71,7 @@ class Points:
         return np.array(games['points'] + games['opponent_points'])
 
 class MaximumLikelihood(RatingSystem):
-    def __init__(self, league, method=Wins(), tol=1e-8, train_interval=None, test_interval=None):
+    def __init__(self, league, method=Wins(), tol=1e-8, train_interval=None, test_interval=None, verbosity=0):
         """
         Parameters
         ----------
@@ -83,6 +83,7 @@ class MaximumLikelihood(RatingSystem):
         """
         super().__init__(league, train_interval=train_interval, test_interval=test_interval)
         self.method = method
+        self.verbosity = verbosity
 
         self.homecourt = False
 
@@ -118,10 +119,11 @@ class MaximumLikelihood(RatingSystem):
         # Have seen problems when using the default solution method,
         # especially when adjusting the value per win (this was prior
         # to floating the last rating).
-        logr = scipy.optimize.fixed_point(fixed_point_func, np.log(r0), args=[self.double_games_train, self.method.win_count, self.method.game_count_per_game, func_count], xtol=tol, method='iteration', maxiter=1000)
+        logr = scipy.optimize.fixed_point(fixed_point_func, np.log(r0), args=[self.double_games_train, self.method.win_count, self.method.game_count_per_game, func_count, self.verbosity], xtol=tol, method='iteration', maxiter=1000)
         r = np.exp(logr)
         self.function_count = func_count[0]
-        print('function calls:', self.function_count)
+        if self.verbosity >= 1:
+            print('function calls:', self.function_count)
 
         # Rescale to geometric mean of 1
         r /= geometric_mean(r)
