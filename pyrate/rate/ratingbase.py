@@ -170,6 +170,10 @@ class RatingSystem:
         print('Consistency: {:.3f}'.format(self.consistency))
         if hasattr(self, 'loo_consistency'):
             print('LOO consistency: {:.3f}'.format(self.loo_consistency))
+        if not self.double_games['train'].all():
+            correct, total = self.evaluate_predicted_wins(exclude_train=True)
+            print('CV consistency: {:.3f}'.format(correct/total))
+        
 
     def store_ratings(self, ratings, offense, defense):
         """After child method is called, organize rating data into DataFrame"""
