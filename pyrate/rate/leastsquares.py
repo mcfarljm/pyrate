@@ -114,7 +114,10 @@ class LeastSquares(RatingSystem):
         ratings = np.append(ratings, 0) # Add 0 rating for last team
         ratings -= np.mean(ratings) # Renormalize
 
-        offense, defense = self.get_offense_defense(self.double_games[self.double_games['train']], ratings, double_weights)
+        if self.gom.supports_off_def:
+            offense, defense = self.get_offense_defense(self.double_games[self.double_games['train']], ratings, double_weights)
+        else:
+            offense, defense = None, None
 
         # Store normalized score:
         self.double_games['normalized_score'] = self.double_games['GOM'] + ratings[self.double_games['opponent_index'].values]

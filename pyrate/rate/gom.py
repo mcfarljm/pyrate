@@ -35,6 +35,7 @@ class GameOutcomeMeasure:
         ax.set_ylabel('Game outcome measure')
 
 class PointDifference(GameOutcomeMeasure):
+    supports_off_def = True
     def __init__(self):
         pass
     def __call__(self, point_diff):
@@ -43,6 +44,10 @@ class PointDifference(GameOutcomeMeasure):
 class CappedPointDifference(GameOutcomeMeasure):
     def __init__(self, cap=15):
         self.max_point_diff = cap
+        if cap > 1:
+            self.supports_off_def = True
+        else:
+            self.supports_off_def = False
     def __call__(self, point_diff):
         return np.sign(point_diff) * np.fmin(self.max_point_diff, np.abs(point_diff))
 
