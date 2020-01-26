@@ -161,20 +161,26 @@ class RatingSystem:
             self.double_games['train'] = True
 
     def summarize(self):
+        cv_flag = (not self.double_games['train'].all())
+
         print('{} played games'.format(len(self.double_games)//2))
+        if cv_flag:
+            print('{} trained games'.format(sum(self.double_games['train'])//2))
         num_sched = len(self.double_schedule)//2
         if num_sched > 0:
             print('{} scheduled games'.format(num_sched))
+
         if self.homecourt:
             print('home advantage: {:.1f}'.format(self.home_adv))
+
         print('Consistency: {:.3f}'.format(self.consistency))
         if hasattr(self, 'loo_consistency'):
             print('LOO consistency: {:.3f}'.format(self.loo_consistency))
-        if not self.double_games['train'].all():
+        if cv_flag:
             correct, total = self.evaluate_predicted_wins(exclude_train=True)
             print('CV consistency: {:.3f}'.format(correct/total))
         print('Log lhood: {:.3f}'.format(self.log_likelihood()))
-        if not self.double_games['train'].all():
+        if cv_flag:
             print('CV log lhood: {:.3f}'.format(self.log_likelihood(exclude_train=True)))
         
 
