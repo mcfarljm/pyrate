@@ -244,7 +244,7 @@ class LeastSquares(RatingSystem):
         # indexes from self.df_teams, which is not what we want.
         y = pd.Series(self.df_teams.loc[games['team_id'],'rating'].values - self.df_teams.loc[games['opponent_id'],'rating'].values, index=games.index)
         if self.homecourt and 'location' in games:
-            y += games['location'].map(loc_map)
+            y += games['location'].map(loc_map) * self.home_adv
         return y
 
     def predict_result(self, games):
