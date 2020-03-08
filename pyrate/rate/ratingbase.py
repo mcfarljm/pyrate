@@ -1,3 +1,5 @@
+"""Define League class and RatingSystem base class"""
+
 import pandas as pd
 import numpy as np
 import sqlalchemy.types as sqlt
@@ -14,6 +16,7 @@ def rank_array(a, descending=True):
     return ranks
 
 class League:
+    """Data structure to hold score and schedule data"""
     def __init__(self, df_games, df_teams=None, duplicated_games=True):
         """Create League instance
 
@@ -120,9 +123,10 @@ class League:
 
 
 class RatingSystem:
+    """Base class for rating system"""
     def __init__(self, league, train_interval=None, test_interval=None):
-        """Base class for rating system
-        
+        """Base class initialization called by child classes
+
         For train/test split, only one of train_interval or
         test_interval may be provided.
 
@@ -161,6 +165,7 @@ class RatingSystem:
             self.double_games['train'] = True
 
     def summarize(self):
+        """Print summary information to screen"""
         cv_flag = (not self.double_games['train'].all())
 
         print('{} played games'.format(len(self.double_games)//2))
@@ -221,6 +226,7 @@ class RatingSystem:
         print(self.df_teams.sort_values(by='rating', ascending=False).head(n))
 
     def store_predictions(self):
+        """Compute and store predictions for scheduled games"""
         self.double_games['predicted_result'] = self.predict_result(self.double_games)
         self.double_games['win_probability'] = self.predict_win_probability(self.double_games)
         self.double_schedule['win_probability'] = self.predict_win_probability(self.double_schedule)

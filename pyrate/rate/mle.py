@@ -1,4 +1,5 @@
 """Maximum likelihood ratings"""
+
 import numpy as np
 import pandas as pd
 import scipy.optimize
@@ -75,11 +76,20 @@ class MaximumLikelihood(RatingSystem):
         """
         Parameters
         ----------
+        league : League
+            League class instance containing the data to be used for
+            the ratings
         method : class instance
             Class instance that implements win_count and
             game_count_per_game methods
         tol : float
             Solution tolerance for ratings
+        train_interval : int or None
+            See RatingSystem
+        test_interval : int or None
+            See RatingSystem
+        verbosity : int
+            Control output verbosity
         """
         super().__init__(league, train_interval=train_interval, test_interval=test_interval)
         self.method = method
@@ -105,6 +115,11 @@ class MaximumLikelihood(RatingSystem):
             return r0
 
     def fit_ratings(self, tol):
+        """Fit rating system using maximum likelihood
+
+        Parent methods store_ratings and store_predictions are called
+        to store the ratings and predictions.
+        """
         # Copy used in case of modification
         self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ].copy()
 

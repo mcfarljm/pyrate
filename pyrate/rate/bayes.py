@@ -1,3 +1,10 @@
+"""Bayesian vesion of the MLE rating system
+
+This module is currently not complete and not functioning but has the
+basic outlines for elements of a Bayesian implementation using Markov
+Chain Monte Carlo sampling
+"""
+
 import numpy as np
 import functools
 

@@ -1,3 +1,5 @@
+"""Least squares rating system"""
+
 import numpy as np
 import pandas as pd
 import scipy.linalg
@@ -55,15 +57,22 @@ class LeastSquares(RatingSystem):
         """
         Parameters
         ----------
-        game_outcome_measure : callable
+        league : League
+            League class instance containing the data to be used for
+            the ratings
+        homecourt : bool
+            Whether to account for homecourt advantage
+        game_outcome_measure : callable or None
             Callable that accepts an array of point differences and
             returns corresponding array of game outcome measures.  May
             be an instance of a GameOutcomeMeasure subclass.
-        homecourt : bool
-            Whether to account for homecourt advantage
-        weight_function : callable
+        weight_function : callable or None
             Function that accepts a games data frame and ratings
             array, and returns an array of weights
+        train_interval : int or None
+            See RatingSystem
+        test_interval : int or None
+            See RatingSystem
         """
         super().__init__(league, train_interval=train_interval, test_interval=test_interval)
         self.homecourt = homecourt
@@ -76,6 +85,14 @@ class LeastSquares(RatingSystem):
         self.fit_ratings()
 
     def fit_ratings(self):
+        """Determine the ratings using least squares
+
+        Solves for the ratings and updates various attrributes of
+        self, including Rsquared, sigma, and residuals.  Overall,
+        offense, and defense ratings are passed to parent method
+        store_ratings.  Parent method store_predictions is called.
+        Leave-one-out predicted results are also stored.
+        """
         # Need game outcome measure and normalized score to be stored
         # in double_games.  Compute them directly for simplicity, even
         # though half of calc's are redundant.

@@ -1,3 +1,5 @@
+"""Utilities for retrieving score and schedule data from www.masseyratings.com"""
+
 import pandas as pd
 import numpy as np
 
@@ -36,7 +38,7 @@ class MasseyURL:
 
     def get_league_data(self):
         """Retrieve data from URL and process into League class"""
-        return league_from_massey_games_csv(self.games_url(), self.teams_url())
+        return _league_from_massey_games_csv(self.games_url(), self.teams_url())
 
     def teams_url(self):
         return self.base_url.format(league=self.league, mode=self.mode, scheduled=self.scheduled, format=2, sub=self.sub)
@@ -45,7 +47,14 @@ class MasseyURL:
         return self.base_url.format(league=self.league, mode=self.mode, scheduled=self.scheduled, format=1, sub=self.sub)
 
 
-def league_from_massey_hyper_csv(games_file, teams_file):
+def _league_from_massey_hyper_csv(games_file, teams_file):
+    """Construct a League instance from game and team data
+    
+    Parameters
+    ----------
+    games_file : file like
+    teams_file : file like
+    """
     df = pd.read_csv(games_file, names=['days','date','game_id','result_id','team_id','location','points'], header=None)
     df['location'] = df['location'].map(loc_map)
     df['date'] = pd.to_datetime(df['date'].astype(str))
@@ -53,7 +62,7 @@ def league_from_massey_hyper_csv(games_file, teams_file):
     df_teams = pd.read_csv(teams_file, index_col=0, header=None, names=['name'], skipinitialspace=True)
     return ratingbase.League.from_hyper_table(df, df_teams=df_teams)
 
-def league_from_massey_games_csv(games_file, teams_file):
+def _league_from_massey_games_csv(games_file, teams_file):
     df = pd.read_csv(games_file, names=['days','date','team_id','location', 'points','opponent_id','opponent_location','opponent_points'], header=None)
     df['location'] = df['location'].map(loc_map)
     df['opponent_location'] = df['opponent_location'].map(loc_map)

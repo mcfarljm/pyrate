@@ -1,3 +1,5 @@
+"""Build website using stored ratings data"""
+
 import os
 
 from flask import Flask, render_template, request

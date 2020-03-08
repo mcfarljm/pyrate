@@ -1,3 +1,5 @@
+"""Interface with the SQLite database to extract ratings data"""
+
 import pandas as pd
 import numpy as np
 import sqlalchemy
