@@ -31,7 +31,11 @@ args = parser.parse_args()
 db_path = os.path.abspath(args.db)
 engine = sqlalchemy.create_engine('sqlite:///{}'.format(db_path))
 
-def get_rating(name, massey_url, score_cap=None): 
+def get_rating(name, massey_url, finished, score_cap=None): 
+    """
+    finished : bool
+       Flag for whether the season is finished
+    """
     if score_cap is not None:
         gom = CappedPointDifference(score_cap)
     else:
@@ -42,20 +46,20 @@ def get_rating(name, massey_url, score_cap=None):
     lsq.summarize()
     lsq.display_ratings(5)
 
-    lsq.to_db(engine, name)
+    lsq.to_db(engine, name, finished)
 
 
 url = massey_data.MasseyURL('nba2020')
-get_rating('NBA 2020', url)
+get_rating('NBA 2020', url, False)
 
 url = massey_data.MasseyURL('nfl2019')
-get_rating('NFL 2019', url)
+get_rating('NFL 2019', url, True)
 
 url = massey_data.MasseyURL('cb2020', ncaa_d1=True)
-get_rating('College Basketball 2020', url)
+get_rating('College Basketball 2020', url, False)
 
 url = massey_data.MasseyURL('cf2019', ncaa_d1=True)
-get_rating('College Football 2019', url)
+get_rating('College Football 2019', url, True)
 
 
 

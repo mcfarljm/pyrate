@@ -291,7 +291,7 @@ class RatingSystem:
         for i,p in enumerate(pvals):
             print('Coverage for {}: {} / {} ({:.2})'.format(p, correct[i], counts[i], float(correct[i])/counts[i]))
 
-    def to_db(self, engine, rating_name):
+    def to_db(self, engine, rating_name, finished=False):
         """Write to database
 
         Create "teams" and "games" tables.  The "games" table also
@@ -302,7 +302,8 @@ class RatingSystem:
         ----------
         rating_name : str
             A unique name for the rating
-
+        finished : bool
+            Flag for whether the season is finished, used by website.
         """
 
         with engine.connect() as conn:
@@ -338,7 +339,7 @@ class RatingSystem:
             n_games = len(self.double_games) // 2
             n_scheduled = len(self.double_schedule) // 2
             Rsquared = self.Rsquared if hasattr(self, 'Rsquared') else None
-            conn.execute('UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=?, games_played = ?, games_scheduled = ? WHERE rating_id = ?;', (self.home_adv, Rsquared, self.consistency, n_games, n_scheduled, rating_id))
+            conn.execute('UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=?, games_played = ?, games_scheduled = ?, finished = ? WHERE rating_id = ?;', (self.home_adv, Rsquared, self.consistency, n_games, n_scheduled, finished, rating_id))
 
             ### teams table
             df = self.df_teams.copy()
