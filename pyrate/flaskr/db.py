@@ -52,6 +52,9 @@ def get_most_recent_game(rating):
         result = output.fetchone()
     return result[0]
 
+# Todo: Currently this is used to populate the "Leagues" dropdown
+# menu.  If the menu gets too crowded, could change this function to
+# only return rows with finished==0.
 def get_rating_system_names():
     """Get list of rating system names"""
     db = get_db()
@@ -76,7 +79,7 @@ def get_rating_systems():
                        'games_played':'GP',
                        'games_scheduled':'GS'},
               inplace=True)
-    df = df[['League','Through','Home Adv','R<sup>2</sup>','Consist','GP','GS']]
+    df = df[['League','Through','Home Adv','R<sup>2</sup>','Consist','GP','GS','finished']]
 
     return df
 

@@ -24,16 +24,25 @@ def create_app(test_config=None):
         # load the test config if passed in
         app.config.from_mapping(test_config)
 
-    @app.route('/')
-    def home():
-        ratings = db.get_rating_system_names()
-        # print("names:", ratings)
-        ratings_summary = db.get_rating_systems()
-        updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
+    def render_rating_summary(df):
         fmts = {'Home Adv':'{:.1f}',
                 'R<sup>2</sup>':'{:.2f}',
                 'Consist':'{:.2f}',}
-        return render_template('home.html', ratings=ratings, updated=updated, ratings_summary=ratings_summary.style.hide_index().format(fmts).set_properties(subset=['Home Adv','Consist'], **{'text-align':'center'}).render(escape=False))
+        df = df.drop('finished', axis=1)
+        if len(df) == 0:
+            return None
+        else:
+            return df.style.hide_index().format(fmts).set_properties(subset=['Home Adv','Consist'], **{'text-align':'center'}).render(escape=False)
+
+    @app.route('/')
+    def home():
+        ratings = db.get_rating_system_names()
+
+        ratings_summary = db.get_rating_systems()
+        current_ratings = ratings_summary[ratings_summary['finished'] == 0]
+        past_ratings = ratings_summary[ratings_summary['finished'] != 0]
+        updated = db.date_updated().strftime('%Y-%m-%d %H:%M')
+        return render_template('home.html', ratings=ratings, updated=updated, ratings_summary=render_rating_summary(current_ratings), past_ratings=render_rating_summary(past_ratings))
 
     @app.route('/<rating>')
     def rating_system(rating):
