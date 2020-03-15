@@ -58,6 +58,9 @@ def create_app(test_config=None):
                 'SoS(a)': '{:.1f}',
                 'Off': '{:.1f}',
                 'Def': '{:.1f}'})
+        else:
+            # Ranking mode
+            fmts.update({'SoS(f)': '{:.0f}'})
             
         return render_template('ratings.html', rating=rating, ratings=ratings, updated=updated, table=df.style.hide_index().format(fmts).set_table_attributes('class="dataframe"').set_uuid('ratingTable').render(escape=False))
 
