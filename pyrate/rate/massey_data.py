@@ -33,6 +33,8 @@ class MasseyURL:
             self.scheduled = ''
         if ncaa_d1:
             self.sub = '&sub=11590'
+        elif 'mlb' in league.lower():
+            self.sub = '&sub=14342'
         else:
             self.sub = ''
 
