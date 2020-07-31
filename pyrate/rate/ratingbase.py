@@ -3,6 +3,7 @@
 import pandas as pd
 import numpy as np
 import sqlalchemy.types as sqlt
+import datetime
 
 from pyrate.db.schema import schema
 
@@ -314,7 +315,7 @@ class RatingSystem:
                 conn.execute(s)
 
             ## properties table (general info)
-            today = pd.to_datetime(pd.datetime.today())
+            today = pd.to_datetime(datetime.datetime.today())
             df = pd.DataFrame({'Updated':[today]})
             df.to_sql("properties", engine, if_exists='replace', index=False)
 
