@@ -76,6 +76,9 @@ class League:
         self.teams['wins'] = [sum(self.double_games.loc[self.double_games['team_id'] == tid, 'result'] == 'W') for tid in self.teams.index]
         self.teams['losses'] = [sum(self.double_games['team_id']==tid) - self.teams.at[tid,'wins'] for tid in self.teams.index]
 
+    def summarize(self):
+        print('League summary: {} teams, {} games'.format(len(self.teams), len(self.double_games)//2))
+
 
     @classmethod
     def from_hyper_table(cls, df_games, df_teams=None):
