@@ -14,6 +14,9 @@ from . import gom
 
 loc_map = {'H': 1, 'A': -1, 'N': 0}
 
+class LeastSquaresError(Exception):
+    pass
+
 def fit_linear_least_squares(X, y, weights=None):
     """Fit linear model
 
@@ -291,8 +294,8 @@ class LeastSquares(RatingSystem):
     def leave_one_out_predictions(self):
         """Compute leave-one-out predictions of game outcome measure"""
         if any(self.leverages > 1.0):
-            # This shouldn't happen
-            raise ValueError("unexpected leverage value greater than 1")
+            # This might happen if there are not enough games played
+            raise LeastSquaresError("leverage value greater than 1")
         loo_resids = self.residuals / (1.0 - self.leverages)
         loo_gom_preds = self.single_games.loc[self.single_games['train'],'GOM'] - loo_resids
         return loo_gom_preds
