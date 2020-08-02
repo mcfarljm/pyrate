@@ -20,7 +20,7 @@ import os
 import argparse
 
 from pyrate.rate import massey_data
-from pyrate.rate import leastsquares
+from pyrate.rate.leastsquares import LeastSquares, LeastSquaresError
 from pyrate.rate.gom import CappedPointDifference, PointDifference
 
 parser = argparse.ArgumentParser(prog='pyrate-update')
@@ -42,11 +42,15 @@ def get_rating(name, massey_url, finished, score_cap=None):
         gom = PointDifference()
 
     league = url.get_league_data()
-    lsq = leastsquares.LeastSquares(league, homecourt=True, game_outcome_measure=gom)
-    lsq.summarize()
-    lsq.display_ratings(5)
-
-    lsq.to_db(engine, name, finished)
+    try:
+        lsq = LeastSquares(league, homecourt=True, game_outcome_measure=gom)
+    except LeastSquaresError as err:
+        print('Least squares error for {}: {}'.format(name, err))
+        league.summarize()
+    else:
+        lsq.summarize()
+        lsq.display_ratings(5)
+        lsq.to_db(engine, name, finished)
 
 
 url = massey_data.MasseyURL('nba2020')
