@@ -52,7 +52,9 @@ class League:
         if df_teams is None:
             self.teams = pd.DataFrame(index=np.sort(df_games['team_id'].unique()))
         else:
-            self.teams = df_teams
+            # Todo: this still leaves in some teams with no games (must be scheduled but not yet played)
+            self.teams = df_teams.loc[df_games['team_id'].unique()]
+            print('len teams before, after:', len(df_teams), len(self.teams))
 
         team_ids = list(self.teams.index)
         df_games = df_games.copy()
@@ -188,7 +190,8 @@ class RatingSystem:
         if cv_flag:
             correct, total = self.evaluate_predicted_wins(exclude_train=True)
             print('CV consistency: {:.3f}'.format(correct/total))
-        print('Log lhood: {:.3f}'.format(self.log_likelihood()))
+        if self.full_rank:
+            print('Log lhood: {:.3f}'.format(self.log_likelihood()))
         if cv_flag:
             print('CV log lhood: {:.3f}'.format(self.log_likelihood(exclude_train=True)))
         
