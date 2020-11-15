@@ -243,10 +243,11 @@ class RatingSystem:
             self.loo_consistency = sum(games['loo_predicted_result']==games['result']) / float(len(games))
 
         # Expected wins, losses:
-        exp_wins = [int(round(sum(self.double_schedule.loc[self.double_schedule['team_id']== tid,'win_probability']))) + self.df_teams.at[tid,'wins'] for tid in self.df_teams.index]
+        if all(self.double_schedule['win_probability'].notnull()):
+            exp_wins = [int(round(sum(self.double_schedule.loc[self.double_schedule['team_id']== tid,'win_probability']))) + self.df_teams.at[tid,'wins'] for tid in self.df_teams.index]
 
-        self.df_teams['expected_losses'] = [sum(self.double_games['team_id']==tid) + sum(self.double_schedule['team_id']==tid) - exp_wins[i] for i,tid in enumerate(self.df_teams.index)]
-        self.df_teams['expected_wins'] = exp_wins
+            self.df_teams['expected_losses'] = [sum(self.double_games['team_id']==tid) + sum(self.double_schedule['team_id']==tid) - exp_wins[i] for i,tid in enumerate(self.df_teams.index)]
+            self.df_teams['expected_wins'] = exp_wins
 
     def evaluate_predicted_wins(self, exclude_train=False):
         """Evaluate how many past games are predicted correctly"""

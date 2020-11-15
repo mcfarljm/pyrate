@@ -202,11 +202,7 @@ class LeastSquares(RatingSystem):
             self.store_leave_one_out_predicted_results()
 
         self.store_ratings(ratings, offense, defense)
-        if self.full_rank:
-            self.store_predictions()
-        else:
-            # Todo: fix hack
-            self.consistency = 0.0
+        self.store_predictions()
 
     def get_basis_matrix(self, games):
         nteam = len(self.df_teams)
@@ -299,6 +295,10 @@ class LeastSquares(RatingSystem):
         distribution instead of t distribution.
 
         """
+        # Gracefully handle case where sigma is not defined:
+        if not self.full_rank or not hasattr(self, 'sigma'):
+            return np.nan
+        
         mu = self.predict_game_outcome_measure(games)
 
         # Get terms that account for parameter uncertainty:
