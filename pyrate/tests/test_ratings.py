@@ -247,6 +247,33 @@ class ToyLeagueScheduled(unittest.TestCase):
         for team_id, expected_scheduled_count in zip(self.league.teams.index, expected_scheduled_counts):
             self.assertEqual(sum(self.league.double_schedule['team_id']==team_id), expected_scheduled_count)
 
+# Test ratings when the games do not produce a saturated (full rank) system
+class Unsaturated(unittest.TestCase):
+
+    def setUp(self):
+        # Note: with only two games, produces a "0-th dimension must
+        # be fixed to 3 but got 2 error" (even when adjusting the code
+        # to bypass dgels and go directly to dgelss).  But shouldn't
+        # it work in that case?
+        self.raw_df = pd.DataFrame(
+            [[1, 5, 'N', 2, 0, 'N'],
+             [1, 5, 'N', 2, 0, 'N'],
+             [3, 1, 'N', 4, 0, 'N']],
+            columns=['team_id', 'points', 'location', 'opponent_id', 'opponent_points', 'opponent_location'])
+
+        self.league = ratingbase.League(self.raw_df, duplicated_games=False)
+
+    def testLeastSquares(self):
+        # Note: the current normalization doesn't work exactly as
+        # desired for this case.  The min norm solution is computed
+        # with the last team (equation) removed, so it skews the
+        # resulting ratings slightly vs what we would expect
+        # expected_ratings = [2.5, -2.5, 0.5, -0.5]
+        expected_ratings = [2.25, -2.75, 0.75, -0.25]
+        lsq = leastsquares.LeastSquares(self.league)
+        for rating, expected_rating in zip(lsq.df_teams['rating'], expected_ratings):
+            self.assertAlmostEqual(rating, expected_rating)
+
 class ErrorTest(unittest.TestCase):
 
     def testGameIDMismatch(self):

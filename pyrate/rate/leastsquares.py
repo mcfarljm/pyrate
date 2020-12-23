@@ -24,7 +24,7 @@ def fit_linear_least_squares(X, y, weights=None):
     -------
     coefs : array
     XXinv : array
-        Inverse of (X*transpose(X))
+        Inverse of (X*transpose(X)), or None if system is not full rank
     """
     num_coefs = np.size(X,1)
     if weights is None:
@@ -33,15 +33,27 @@ def fit_linear_least_squares(X, y, weights=None):
         rtw = np.diag(np.sqrt(weights))
         X = np.dot(rtw, X)
         y = np.dot(rtw, y)
+    # print('solving:', np.shape(X), np.shape(y))
+    # print('rank:', np.linalg.matrix_rank(X))
     lqr,coefs,info = scipy.linalg.lapack.dgels(X, y)
-    coefs = coefs[:num_coefs]
-    XXinv = lqr[:num_coefs,:]
-    XXinv,info = scipy.linalg.lapack.dpotri(XXinv,lower=0,overwrite_c=1)
+    if info < 0:
+        raise LeastSquaresError("error in lapack.dgels, info={}".format(info))
+    elif info == 0:
+        coefs = coefs[:num_coefs]
+        XXinv = lqr[:num_coefs,:]
+        XXinv,info = scipy.linalg.lapack.dpotri(XXinv,lower=0,overwrite_c=1)
+        # Copy upper to lower triangle
+        i_lower = np.tril_indices(len(XXinv), -1)
+        XXinv[i_lower] = XXinv.T[i_lower]
+        # Now have inv(XX')
+    else:
+        XXinv = None
+        _, coefs, _, rank, _, info = scipy.linalg.lapack.dgelss(X, y)
+        # print('Warning, rank deficient: rank={}, nteam={}'.format(rank, np.size(X,1)))
+        coefs = coefs[:num_coefs]
+        if info != 0:
+            raise LeastSquaresError("Error in dgelss: {}".format(info))
 
-    # Copy upper to lower triangle
-    i_lower = np.tril_indices(len(XXinv), -1)
-    XXinv[i_lower] = XXinv.T[i_lower]
-    # Now have inv(XX')
     return coefs, XXinv
 
 def test_weight_func(games):
@@ -114,6 +126,7 @@ class LeastSquares(RatingSystem):
         else:
             weights = None
         ratings, self.XXinv = fit_linear_least_squares(X, games['GOM'].values, weights=weights)
+        self.full_rank = self.XXinv is not None
 
         if self.weight_function:
             # Recalculate, since weights could depend on ratings
@@ -172,9 +185,10 @@ class LeastSquares(RatingSystem):
         else:
             dof = len(games) - nparam
 
-        self.sigma = np.sqrt( SSE / dof )
-
         if dof > 0:
+            self.sigma = np.sqrt( SSE / dof )
+
+        if dof > 0 and self.full_rank:
             self.leverages = np.array([np.dot(np.dot(x, self.XXinv), x) for x in X])
             if self.weight_function:
                 # This is essentially like putting the weights into
@@ -184,7 +198,8 @@ class LeastSquares(RatingSystem):
         else:
             self.leverages = np.ones(len(games))
         self.residuals = residuals
-        self.store_leave_one_out_predicted_results()
+        if self.full_rank:
+            self.store_leave_one_out_predicted_results()
 
         self.store_ratings(ratings, offense, defense)
         self.store_predictions()
@@ -280,6 +295,10 @@ class LeastSquares(RatingSystem):
         distribution instead of t distribution.
 
         """
+        # Gracefully handle case where sigma is not defined:
+        if not self.full_rank or not hasattr(self, 'sigma'):
+            return np.nan
+        
         mu = self.predict_game_outcome_measure(games)
 
         # Get terms that account for parameter uncertainty:
@@ -302,10 +321,14 @@ class LeastSquares(RatingSystem):
 
     def store_leave_one_out_predicted_results(self):
         """Compute and store predicted results based on leave-one-out models"""
-        loo_gom_preds = self.leave_one_out_predictions()
-        loo_results = ['W' if gom > 0.0 else 'L' for gom in loo_gom_preds]
+        try:
+            loo_gom_preds = self.leave_one_out_predictions()
+        except LeastSquaresError as e:
+            print(e)
+        else:
+            loo_results = ['W' if gom > 0.0 else 'L' for gom in loo_gom_preds]
 
-        self.single_games.loc[self.single_games['train'],'loo_predicted_result'] = loo_results
+            self.single_games.loc[self.single_games['train'],'loo_predicted_result'] = loo_results
 
     def strength_of_schedule(self, ratings):
         return np.mean(ratings)

@@ -52,10 +52,26 @@ class League:
         if df_teams is None:
             self.teams = pd.DataFrame(index=np.sort(df_games['team_id'].unique()))
         else:
-            self.teams = df_teams
+            # Here we retain only teams that are referenced in
+            # df_games.  Note this does not necessarily mean all teams
+            # have data for played games (could be scheduled games
+            # only).
+            self.teams = df_teams.loc[df_games['team_id'].unique()]
+            # print('len teams before, after:', len(df_teams), len(self.teams))
+
+        # Drop teams with no played games.  (May be a way to clean
+        # this up a little; currently requires recomputing the set of
+        # unplayed games.)
+        unplayed = (df_games['points'].isnull() | df_games['opponent_points'].isnull())
+        self.teams = self.teams.loc[[t for t in self.teams.index if sum(df_games.loc[~unplayed,'team_id']==t) > 0]]
+        # And remove remnants from the games data frame (i.e.,
+        # scheduled games for teams that haven't played yet, which
+        # will cause problems in the indexing below)
+        df_games = df_games.copy()
+        df_games = df_games.loc[df_games['team_id'].isin(self.teams.index),:]
+        df_games = df_games.loc[df_games['opponent_id'].isin(self.teams.index),:]
 
         team_ids = list(self.teams.index)
-        df_games = df_games.copy()
         df_games['team_index'] = df_games['team_id'].apply(lambda x: team_ids.index(x))
         df_games['opponent_index'] = df_games['opponent_id'].apply(lambda x: team_ids.index(x))
 
@@ -188,7 +204,8 @@ class RatingSystem:
         if cv_flag:
             correct, total = self.evaluate_predicted_wins(exclude_train=True)
             print('CV consistency: {:.3f}'.format(correct/total))
-        print('Log lhood: {:.3f}'.format(self.log_likelihood()))
+        if self.full_rank:
+            print('Log lhood: {:.3f}'.format(self.log_likelihood()))
         if cv_flag:
             print('CV log lhood: {:.3f}'.format(self.log_likelihood(exclude_train=True)))
         
@@ -240,10 +257,11 @@ class RatingSystem:
             self.loo_consistency = sum(games['loo_predicted_result']==games['result']) / float(len(games))
 
         # Expected wins, losses:
-        exp_wins = [int(round(sum(self.double_schedule.loc[self.double_schedule['team_id']== tid,'win_probability']))) + self.df_teams.at[tid,'wins'] for tid in self.df_teams.index]
+        if all(self.double_schedule['win_probability'].notnull()):
+            exp_wins = [int(round(sum(self.double_schedule.loc[self.double_schedule['team_id']== tid,'win_probability']))) + self.df_teams.at[tid,'wins'] for tid in self.df_teams.index]
 
-        self.df_teams['expected_losses'] = [sum(self.double_games['team_id']==tid) + sum(self.double_schedule['team_id']==tid) - exp_wins[i] for i,tid in enumerate(self.df_teams.index)]
-        self.df_teams['expected_wins'] = exp_wins
+            self.df_teams['expected_losses'] = [sum(self.double_games['team_id']==tid) + sum(self.double_schedule['team_id']==tid) - exp_wins[i] for i,tid in enumerate(self.df_teams.index)]
+            self.df_teams['expected_wins'] = exp_wins
 
     def evaluate_predicted_wins(self, exclude_train=False):
         """Evaluate how many past games are predicted correctly"""
