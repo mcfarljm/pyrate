@@ -321,10 +321,14 @@ class LeastSquares(RatingSystem):
 
     def store_leave_one_out_predicted_results(self):
         """Compute and store predicted results based on leave-one-out models"""
-        loo_gom_preds = self.leave_one_out_predictions()
-        loo_results = ['W' if gom > 0.0 else 'L' for gom in loo_gom_preds]
+        try:
+            loo_gom_preds = self.leave_one_out_predictions()
+        except LeastSquaresError as e:
+            print(e)
+        else:
+            loo_results = ['W' if gom > 0.0 else 'L' for gom in loo_gom_preds]
 
-        self.single_games.loc[self.single_games['train'],'loo_predicted_result'] = loo_results
+            self.single_games.loc[self.single_games['train'],'loo_predicted_result'] = loo_results
 
     def strength_of_schedule(self, ratings):
         return np.mean(ratings)
