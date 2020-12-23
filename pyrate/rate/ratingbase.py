@@ -57,14 +57,13 @@ class League:
             # have data for played games (could be scheduled games
             # only).
             self.teams = df_teams.loc[df_games['team_id'].unique()]
-            print('len teams before, after:', len(df_teams), len(self.teams))
+            # print('len teams before, after:', len(df_teams), len(self.teams))
 
         # Drop teams with no played games.  (May be a way to clean
         # this up a little; currently requires recomputing the set of
         # unplayed games.)
         unplayed = (df_games['points'].isnull() | df_games['opponent_points'].isnull())
         self.teams = self.teams.loc[[t for t in self.teams.index if sum(df_games.loc[~unplayed,'team_id']==t) > 0]]
-        print('len team after drop:', len(self.teams))
         # And remove remnants from the games data frame (i.e.,
         # scheduled games for teams that haven't played yet, which
         # will cause problems in the indexing below)
