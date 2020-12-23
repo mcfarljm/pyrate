@@ -52,14 +52,17 @@ def get_most_recent_game(rating):
         result = output.fetchone()
     return result[0]
 
-# Todo: Currently this is used to populate the "Leagues" dropdown
-# menu.  If the menu gets too crowded, could change this function to
-# only return rows with finished==0.
 def get_rating_system_names():
-    """Get list of rating system names"""
+    """Get list of rating system names
+
+    Used to populate the "Leagues" menu, so do not include those that
+    are finished"""
     db = get_db()
     with db.connect() as conn:
-        output = conn.execute("SELECT name FROM ratings ORDER BY rowid;")
+        output = conn.execute("""
+        SELECT name FROM ratings
+        WHERE finished = 0
+        ORDER BY rowid;""")
         results = [r[0] for r in output.fetchall()]
     return results
 
