@@ -106,8 +106,8 @@ class League:
         df_games : pandas Data frame
             A data frame with league data, containing at least the
             following columns: 'game_id', 'team_id', 'points'.
-            Optional columns are 'date', 'location' (1 for home, -1
-            for away, 0 for neutral).
+            Optional columns are 'date', 'location' ('H', 'A', and
+            'N').
         """
         if 'team_id' not in df_games:
             raise ValueError("expected 'team_id' column")
