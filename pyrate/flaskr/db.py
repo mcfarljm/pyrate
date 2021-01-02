@@ -62,7 +62,7 @@ def get_rating_system_names():
         output = conn.execute("""
         SELECT name FROM ratings
         WHERE finished = 0
-        ORDER BY rowid;""")
+        ORDER BY rowid DESC;""")
         results = [r[0] for r in output.fetchall()]
     return results
 
@@ -82,6 +82,10 @@ def get_rating_systems():
                        'games_played':'GP',
                        'games_scheduled':'GS'},
               inplace=True)
+
+    # Reverse sort by rating_id to show the most recent leagues first:
+    df.sort_values(by='rating_id', ascending=False, inplace=True)
+
     df = df[['League','Through','Home Adv','R<sup>2</sup>','Consist','GP','GS','finished']]
 
     return df
