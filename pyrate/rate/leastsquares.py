@@ -36,6 +36,12 @@ def fit_linear_least_squares(X, y, weights=None):
     # print('solving:', np.shape(X), np.shape(y))
     # print('rank:', np.linalg.matrix_rank(X))
     lqr,coefs,info = scipy.linalg.lapack.dgels(X, y)
+    if info == 0 and max(np.abs(coefs)) > 10000:
+        # Check for a numerically ill-conditioned solution.  An
+        # alternative would be to check np.linalg.matrix_rank.  In
+        # principle this should be caught by dgels, but have seen a
+        # case where it is not.
+        info = 1
     if info < 0:
         raise LeastSquaresError("error in lapack.dgels, info={}".format(info))
     elif info == 0:
