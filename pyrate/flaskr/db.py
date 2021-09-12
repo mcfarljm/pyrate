@@ -73,7 +73,7 @@ def get_rating_systems():
 
     df['Through'] = df['name'].apply(get_most_recent_game)
 
-    df['name'] = df['name'].str.replace('(.+)', add_rating_link)
+    df['name'] = df['name'].str.replace('(.+)', add_rating_link, regex=True)
 
     df.rename(columns={'name':'League',
                        'home_advantage':'Home Adv',
@@ -145,7 +145,7 @@ def get_rating_table(rating):
         df.drop(columns='Def', inplace=True)
 
     func = lambda m: add_link(m, rating)
-    df['Team'] = df['Team'].str.replace('(.+)',func)
+    df['Team'] = df['Team'].str.replace('(.+)',func, regex=True)
     
     df.sort_values(by='Rating', ascending=False, inplace=True)
     return df
@@ -207,7 +207,7 @@ def get_games_table(rating, team_id):
     df.sort_values(by='Date', inplace=True)
 
     func = lambda m: add_link(m, rating)
-    df['Opponent'] = df['Opponent'].str.replace('(.+)', func)
+    df['Opponent'] = df['Opponent'].str.replace('(.+)', func, regex=True)
     
     return df
 
@@ -234,6 +234,6 @@ def get_scheduled_games(rating, team_id):
     df.sort_values(by='Date', inplace=True)
 
     func = lambda m: add_link(m, rating)
-    df['Opponent'] = df['Opponent'].str.replace('(.+)', func)
+    df['Opponent'] = df['Opponent'].str.replace('(.+)', func, regex=True)
     
     return df
