@@ -247,17 +247,12 @@ class ToyLeagueScheduled(unittest.TestCase):
         for team_id, expected_scheduled_count in zip(self.league.teams.index, expected_scheduled_counts):
             self.assertEqual(sum(self.league.double_schedule['team_id']==team_id), expected_scheduled_count)
 
-# Test ratings when the games do not produce a saturated (full rank) system
-class Unsaturated(unittest.TestCase):
+class Underdetermined(unittest.TestCase):
+    """Test ratings for a system with fewer games than teams."""
 
     def setUp(self):
-        # Note: with only two games, produces a "0-th dimension must
-        # be fixed to 3 but got 2 error" (even when adjusting the code
-        # to bypass dgels and go directly to dgelss).  But shouldn't
-        # it work in that case?
         self.raw_df = pd.DataFrame(
             [[1, 5, 'N', 2, 0, 'N'],
-             [1, 5, 'N', 2, 0, 'N'],
              [3, 1, 'N', 4, 0, 'N']],
             columns=['team_id', 'points', 'location', 'opponent_id', 'opponent_points', 'opponent_location'])
 

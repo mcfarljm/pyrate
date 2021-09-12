@@ -33,6 +33,12 @@ def fit_linear_least_squares(X, y, weights=None):
         rtw = np.diag(np.sqrt(weights))
         X = np.dot(rtw, X)
         y = np.dot(rtw, y)
+    underdetermined = (len(y) < num_coefs)
+    if underdetermined:
+        # For underdetermined systems, we need to size y based on
+        # num_coefs (probably due to how lapack overwrites "b" in
+        # place).
+        y = np.resize(y, num_coefs)
     # print('solving:', np.shape(X), np.shape(y))
     # print('rank:', np.linalg.matrix_rank(X))
     lqr,coefs,info = scipy.linalg.lapack.dgels(X, y)
@@ -46,12 +52,15 @@ def fit_linear_least_squares(X, y, weights=None):
         raise LeastSquaresError("error in lapack.dgels, info={}".format(info))
     elif info == 0:
         coefs = coefs[:num_coefs]
-        XXinv = lqr[:num_coefs,:]
-        XXinv,info = scipy.linalg.lapack.dpotri(XXinv,lower=0,overwrite_c=1)
-        # Copy upper to lower triangle
-        i_lower = np.tril_indices(len(XXinv), -1)
-        XXinv[i_lower] = XXinv.T[i_lower]
-        # Now have inv(XX')
+        if underdetermined:
+            XXinv = None
+        else:
+            XXinv = lqr[:num_coefs,:]
+            XXinv,info = scipy.linalg.lapack.dpotri(XXinv,lower=0,overwrite_c=1)
+            # Copy upper to lower triangle
+            i_lower = np.tril_indices(len(XXinv), -1)
+            XXinv[i_lower] = XXinv.T[i_lower]
+            # Now have inv(XX')
     else:
         XXinv = None
         _, coefs, _, rank, _, info = scipy.linalg.lapack.dgelss(X, y)
