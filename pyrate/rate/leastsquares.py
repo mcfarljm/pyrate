@@ -27,9 +27,7 @@ def fit_linear_least_squares(X, y, weights=None):
         Inverse of (X*transpose(X)), or None if system is not full rank
     """
     num_coefs = np.size(X,1)
-    if weights is None:
-        X,y = X,y
-    else:
+    if weights is not None:
         rtw = np.diag(np.sqrt(weights))
         X = np.dot(rtw, X)
         y = np.dot(rtw, y)
