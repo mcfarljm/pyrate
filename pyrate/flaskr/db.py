@@ -80,13 +80,13 @@ def get_rating_systems():
                        'r_squared':'R<sup>2</sup>',
                        'consistency':'Consist',
                        'games_played':'GP',
-                       'games_scheduled':'GS'},
+                       'games_scheduled':'GR'},
               inplace=True)
 
     # Reverse sort by rating_id to show the most recent leagues first:
     df.sort_values(by='rating_id', ascending=False, inplace=True)
 
-    df = df[['League','Through','Home Adv','R<sup>2</sup>','Consist','GP','GS','finished']]
+    df = df[['League','Through','Home Adv','R<sup>2</sup>','Consist','GP','GR','finished']]
 
     return df
 
