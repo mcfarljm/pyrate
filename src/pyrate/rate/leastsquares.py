@@ -4,13 +4,14 @@ import numpy as np
 import pandas as pd
 import scipy.linalg
 import scipy.stats
+
 try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
 
-from .ratingbase import RatingSystem
 from . import gom
+from .ratingbase import RatingSystem
 
 loc_map = {'H': 1, 'A': -1, 'N': 0}
 
@@ -47,7 +48,7 @@ def fit_linear_least_squares(X, y, weights=None):
         # case where it is not.
         info = 1
     if info < 0:
-        raise LeastSquaresError("error in lapack.dgels, info={}".format(info))
+        raise LeastSquaresError(f"error in lapack.dgels, info={info}")
     elif info == 0:
         coefs = coefs[:num_coefs]
         if underdetermined:
@@ -65,7 +66,7 @@ def fit_linear_least_squares(X, y, weights=None):
         # print('Warning, rank deficient: rank={}, nteam={}'.format(rank, np.size(X,1)))
         coefs = coefs[:num_coefs]
         if info != 0:
-            raise LeastSquaresError("Error in dgelss: {}".format(info))
+            raise LeastSquaresError(f"Error in dgelss: {info}")
 
     return coefs, XXinv
 

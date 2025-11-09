@@ -1,8 +1,9 @@
 """Helper classes for formulating game outcome measure"""
 
 import numpy as np
-import scipy.stats
 import scipy.optimize
+import scipy.stats
+
 try:
     import matplotlib.pyplot as plt
 except:

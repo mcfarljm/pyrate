@@ -1,11 +1,8 @@
 """Interface with the SQLite database to extract ratings data"""
 
 import pandas as pd
-import numpy as np
 import sqlalchemy
-
-from flask import current_app, g, url_for, request
-from flask.cli import with_appcontext
+from flask import current_app, g, request, url_for
 
 from pyrate.rate.ratingbase import rank_array
 
@@ -34,7 +31,7 @@ def add_rating_link(m):
     """Replace rating name with link"""
     r = m.group(0)
     url = url_for('rating_system', rating=r)
-    return '<a href="{url}">{rating}</a>'.format(url=url, rating=r)
+    return f'<a href="{url}">{r}</a>'
 
 def get_most_recent_game(rating):
     """Get date of most recent game played"""
@@ -94,7 +91,7 @@ def add_link(m, rating):
     """Replace team name with link"""
     t = m.group(0)
     url = url_for('team_page', rating=rating, team=t)
-    return '<a href="{url}">{team}</a>'.format(url=url, team=t)
+    return f'<a href="{url}">{t}</a>'
 
 def get_rating_table(rating):
     db = get_db()

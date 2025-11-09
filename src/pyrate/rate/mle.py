@@ -7,6 +7,7 @@ from scipy.stats import gmean as geometric_mean
 
 from .ratingbase import RatingSystem
 
+
 def fixed_point_func(logr, double_games, get_win_count, get_available_win_array, func_count=[0], verbosity=0):
     """Function h(logr) = logr
 

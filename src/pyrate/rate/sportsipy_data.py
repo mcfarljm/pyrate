@@ -1,8 +1,8 @@
 import pandas as pd
-from sportsipy.nba.teams import Teams as NbaTeams
 from sportsipy.nba.teams import Schedule as NbaSchedule
-from sportsipy.nfl.teams import Teams as NflTeams
+from sportsipy.nba.teams import Teams as NbaTeams
 from sportsipy.nfl.teams import Schedule as NflSchedule
+from sportsipy.nfl.teams import Teams as NflTeams
 
 from . import ratingbase
 

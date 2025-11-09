@@ -5,10 +5,10 @@ basic outlines for elements of a Bayesian implementation using Markov
 Chain Monte Carlo sampling
 """
 
-import numpy as np
-import functools
 
+import numpy as np
 import ratingbase as rb
+
 
 def rating_func(r1, r2):
     a = r1 * (1.0-r2)
@@ -109,8 +109,9 @@ class Bayes(rb.RatingSystm):
 
 
 if __name__ == '__main__':
-    import pandas as pd
     import datetime
+
+    import pandas as pd
 
     bayes = Bayes(datetime.datetime(2018,1,1))
     bayes.evaluate_predicted_wins(True)

@@ -1,11 +1,10 @@
 import unittest
-import pandas as pd
-import numpy as np
 
-from pyrate.rate import ratingbase
-from pyrate.rate import leastsquares
-from pyrate.rate import mle
-from pyrate.rate import gom
+import numpy as np
+import pandas as pd
+
+from pyrate.rate import gom, leastsquares, mle, ratingbase
+
 
 class ToyLeagueHyper(unittest.TestCase):
 

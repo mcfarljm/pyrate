@@ -1,7 +1,7 @@
 """Utilities for retrieving score and schedule data from www.masseyratings.com"""
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from . import ratingbase
 

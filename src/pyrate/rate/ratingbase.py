@@ -1,11 +1,13 @@
 """Define League class and RatingSystem base class"""
 
-import pandas as pd
-import numpy as np
-import sqlalchemy.types as sqlt
 import datetime
 
+import numpy as np
+import pandas as pd
+import sqlalchemy.types as sqlt
+
 from pyrate.db.schema import schema
+
 
 def rank_array(a, descending=True):
     """Rank array counting from 1"""
@@ -94,7 +96,7 @@ class League:
         self.teams['losses'] = [sum(self.double_games['team_id']==tid) - self.teams.at[tid,'wins'] for tid in self.teams.index]
 
     def summarize(self):
-        print('League summary: {} teams, {} games'.format(len(self.teams), len(self.double_games)//2))
+        print(f'League summary: {len(self.teams)} teams, {len(self.double_games)//2} games')
 
 
     @classmethod
@@ -188,26 +190,26 @@ class RatingSystem:
         """Print summary information to screen"""
         cv_flag = (not self.double_games['train'].all())
 
-        print('{} played games'.format(len(self.double_games)//2))
+        print(f'{len(self.double_games)//2} played games')
         if cv_flag:
             print('{} trained games'.format(sum(self.double_games['train'])//2))
         num_sched = len(self.double_schedule)//2
         if num_sched > 0:
-            print('{} scheduled games'.format(num_sched))
+            print(f'{num_sched} scheduled games')
 
         if self.homecourt:
-            print('home advantage: {:.1f}'.format(self.home_adv))
+            print(f'home advantage: {self.home_adv:.1f}')
 
-        print('Consistency: {:.3f}'.format(self.consistency))
+        print(f'Consistency: {self.consistency:.3f}')
         if hasattr(self, 'loo_consistency'):
-            print('LOO consistency: {:.3f}'.format(self.loo_consistency))
+            print(f'LOO consistency: {self.loo_consistency:.3f}')
         if cv_flag:
             correct, total = self.evaluate_predicted_wins(exclude_train=True)
-            print('CV consistency: {:.3f}'.format(correct/total))
+            print(f'CV consistency: {correct/total:.3f}')
         if self.full_rank:
-            print('Log lhood: {:.3f}'.format(self.log_likelihood()))
+            print(f'Log lhood: {self.log_likelihood():.3f}')
         if cv_flag:
-            print('CV log lhood: {:.3f}'.format(self.log_likelihood(exclude_train=True)))
+            print(f'CV log lhood: {self.log_likelihood(exclude_train=True):.3f}')
         
 
     def store_ratings(self, ratings, offense=None, defense=None):
@@ -311,7 +313,7 @@ class RatingSystem:
 
         print("Total count:", total_count)
         for i,p in enumerate(pvals):
-            print('Coverage for {}: {} / {} ({:.2})'.format(p, correct[i], counts[i], float(correct[i])/counts[i]))
+            print(f'Coverage for {p}: {correct[i]} / {counts[i]} ({float(correct[i])/counts[i]:.2})')
 
     def to_db(self, engine, rating_name, finished=False):
         """Write to database
