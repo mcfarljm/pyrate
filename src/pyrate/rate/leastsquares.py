@@ -1,14 +1,14 @@
 """Least squares rating system"""
 
+import contextlib
+
 import numpy as np
 import pandas as pd
 import scipy.linalg
 import scipy.stats
 
-try:
+with contextlib.suppress(ImportError):
     import matplotlib.pyplot as plt
-except ImportError:
-    pass
 
 from . import gom
 from .ratingbase import RatingSystem

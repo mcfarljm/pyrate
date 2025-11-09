@@ -1,13 +1,13 @@
 """Helper classes for formulating game outcome measure"""
 
+import contextlib
+
 import numpy as np
 import scipy.optimize
 import scipy.stats
 
-try:
+with contextlib.suppress(ImportError):
     import matplotlib.pyplot as plt
-except ImportError:
-    pass
 
 
 class GameOutcomeMeasure:
@@ -21,10 +21,7 @@ class GameOutcomeMeasure:
 
     def plot(self, ub=None, lb=0):
         if ub is None:
-            if hasattr(self, "max_point_diff"):
-                ub = self.max_point_diff
-            else:
-                ub = 20
+            ub = self.max_point_diff if hasattr(self, "max_point_diff") else 20
 
         xvals = np.linspace(lb, ub, 200)
         f, ax = plt.subplots()

@@ -13,7 +13,7 @@ def fixed_point_func(
     double_games,
     get_win_count,
     get_available_win_array,
-    func_count=[0],
+    func_count,
     verbosity=0,
 ):
     """Function h(logr) = logr
@@ -98,7 +98,7 @@ class MaximumLikelihood(RatingSystem):
     def __init__(
         self,
         league,
-        method=Wins(),
+        method,
         tol=1e-8,
         train_interval=None,
         test_interval=None,
@@ -142,9 +142,9 @@ class MaximumLikelihood(RatingSystem):
             r0 = np.ones(len(self.df_teams))
             for i in range(len(self.df_teams)):
                 df = self.double_games_train[self.double_games_train["team_index"] == i]
-                w = self.method.win_count(df)
-                l = len(df) - w
-                r0[i] = w / l
+                wins = self.method.win_count(df)
+                losses = len(df) - wins
+                r0[i] = wins / losses
             return r0
 
     def fit_ratings(self, tol):
