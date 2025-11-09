@@ -3,6 +3,7 @@
 import pandas as pd
 import sqlalchemy
 from flask import current_app, g, request, url_for
+from sqlalchemy import text
 
 from pyrate.rate.ratingbase import rank_array
 
@@ -25,8 +26,8 @@ def init_app(app):
 
 def date_updated():
     db = get_db()
-    db.connect()
-    output = db.execute("SELECT Updated from properties;")
+    with db.connect() as conn:
+        output = conn.execute(text("SELECT Updated from properties;"))
     date = pd.to_datetime(output.fetchone()[0])
     return date
 
@@ -45,12 +46,12 @@ def get_most_recent_game(rating):
     query = """
     SELECT g.date
     FROM games g INNER JOIN ratings r on g.rating_id = r.rating_id
-    WHERE r.name = ? AND g.result IS NOT NULL
+    WHERE r.name = :rating AND g.result IS NOT NULL
     ORDER by g.date DESC
     LIMIT 1;"""
 
     with db.connect() as conn:
-        output = conn.execute(query, (rating,))
+        output = conn.execute(text(query), {"rating": rating})
         result = output.fetchone()
     return result[0]
 
@@ -62,10 +63,11 @@ def get_rating_system_names():
     are finished"""
     db = get_db()
     with db.connect() as conn:
-        output = conn.execute("""
+        query = """
         SELECT name FROM ratings
         WHERE finished = 0
-        ORDER BY rowid DESC;""")
+        ORDER BY rowid DESC;"""
+        output = conn.execute(text(query))
         results = [r[0] for r in output.fetchall()]
     return results
 
@@ -123,9 +125,9 @@ def get_rating_table(rating):
     query = """
     SELECT t.rank, t.name, t.wins, t.losses, t.rating, t.offense_rank, t.defense_rank, t.offense, t.defense, t.strength_of_schedule_past, t.strength_of_schedule_future
     FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
-    WHERE r.name = ?;"""
+    WHERE r.name = :rating;"""
 
-    df = pd.read_sql_query(query, db, params=[rating])
+    df = pd.read_sql_query(text(query), db, params={"rating": rating})
     df.rename(
         columns={
             "name": "Team",
@@ -179,14 +181,13 @@ def get_rating_table(rating):
 def get_team_id(rating, team_name):
     db = get_db()
 
-    conn = db.connect()
-    output = db.execute(
-        """
+    query = """
     SELECT t.team_id
     FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
-    WHERE t.name = ? AND r.name = ?;""",
-        (team_name, rating),
-    )
+    WHERE t.name = :team_name AND r.name = :rating;"""
+
+    with db.connect() as conn:
+        output = conn.execute(text(query), {"team_name": team_name, "rating": rating})
 
     team_id = output.fetchone()[0]
     return team_id
@@ -198,16 +199,15 @@ def get_team_data(rating, team_id):
     query = """
     SELECT t.rank, t.rating, t.wins, t.losses, t.expected_wins, t.expected_losses, t.offense_rank, t.defense_rank
     FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
-    WHERE t.team_id = ? AND r.name = ?;"""
+    WHERE t.team_id = :team_id AND r.name = :rating;"""
     with db.connect() as conn:
-        output = conn.execute(query, (team_id, rating))
+        output = conn.execute(text(query), {"team_id": team_id, "rating": rating})
         result = output.fetchone()
 
     # Converting result to a dict makes it editable (and dict works
     # better than pd.Series here because it doesn't coerce all values
     # into same format)
-    result = dict(zip(result.keys(), result))
-    return result
+    return result._asdict()
 
 
 def get_games_table(rating, team_id):
@@ -217,10 +217,15 @@ def get_games_table(rating, team_id):
     SELECT g.date, g.location, t.name, t.rank, g.result, g.points_for, g.points_against, g.normalized_score
     FROM games g INNER JOIN teams t ON g.opponent_id = t.team_id
     INNER JOIN ratings r ON g.rating_id = r.rating_id
-    WHERE r.name = ? and g.team_id = ? AND t.rating_id = r.rating_id AND g.result IS NOT NULL;
+    WHERE r.name = :rating and g.team_id = :team_id AND t.rating_id = r.rating_id AND g.result IS NOT NULL;
     """
 
-    df = pd.read_sql_query(query, db, params=[rating, team_id], parse_dates=["date"])
+    df = pd.read_sql_query(
+        text(query),
+        db,
+        params={"rating": rating, "team_id": team_id},
+        parse_dates=["date"],
+    )
 
     df.rename(
         columns={
@@ -254,10 +259,15 @@ def get_scheduled_games(rating, team_id):
     SELECT g.date, g.location, t.name, t.rank, g.win_probability
     FROM games g INNER JOIN teams t ON g.opponent_id = t.team_id
     INNER JOIN ratings r ON g.rating_id = r.rating_id
-    WHERE r.name = ? and g.team_id = ? AND t.rating_id = r.rating_id AND g.result IS NULL;
+    WHERE r.name = :rating and g.team_id = :team_id AND t.rating_id = r.rating_id AND g.result IS NULL;
     """
 
-    df = pd.read_sql_query(query, db, params=[rating, team_id], parse_dates=["date"])
+    df = pd.read_sql_query(
+        text(query),
+        db,
+        params={"rating": rating, "team_id": team_id},
+        parse_dates=["date"],
+    )
 
     df.rename(
         columns={

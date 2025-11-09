@@ -35,12 +35,12 @@ def create_app(test_config=None):
             return None
         else:
             return (
-                df.style.hide_index()
+                df.style.hide(axis="index")
                 .format(fmts)
                 .set_properties(
                     subset=["Home Adv", "Consist"], **{"text-align": "center"}
                 )
-                .render(escape=False)
+                .to_html()
             )
 
     @app.route("/")
@@ -85,11 +85,11 @@ def create_app(test_config=None):
             rating=rating,
             ratings=ratings,
             updated=updated,
-            table=df.style.hide_index()
+            table=df.style.hide(axis="index")
             .format(fmts)
             .set_table_attributes('class="dataframe"')
             .set_uuid("ratingTable")
-            .render(escape=False),
+            .to_html(),
         )
 
     @app.route("/<rating>/<team>")
@@ -115,7 +115,7 @@ def create_app(test_config=None):
             return ["color: green" if v == "W" else "color: red" for v in s]
 
         games = (
-            df.style.hide_index()
+            df.style.hide(axis="index")
             .format(fmts)
             .apply(color_outcome, subset="Result")
             .set_uuid("gameTable")
@@ -125,10 +125,10 @@ def create_app(test_config=None):
                 subset=["NS"], align="zero"
             )
         scheduled = (
-            df_sched.style.hide_index()
+            df_sched.style.hide(axis="index")
             .format(fmts_sched)
             .set_uuid("scheduleTable")
-            .render(escape=False)
+            .to_html()
         )
 
         return render_template(
@@ -137,7 +137,7 @@ def create_app(test_config=None):
             team=team,
             ratings=ratings,
             team_data=td,
-            table=games.render(escape=False),
+            table=games.to_html(),
             scheduled=scheduled,
         )
 
