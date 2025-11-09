@@ -171,7 +171,9 @@ def get_rating_table(rating):
     if any(df["Def"].isnull()):
         df.drop(columns="Def", inplace=True)
 
-    func = lambda m: add_link(m, rating)
+    def func(m):
+        return add_link(m, rating)
+
     df["Team"] = df["Team"].str.replace("(.+)", func, regex=True)
 
     df.sort_values(by="Rating", ascending=False, inplace=True)
@@ -246,7 +248,9 @@ def get_games_table(rating, team_id):
 
     df.sort_values(by="Date", inplace=True)
 
-    func = lambda m: add_link(m, rating)
+    def func(m):
+        return add_link(m, rating)
+
     df["Opponent"] = df["Opponent"].str.replace("(.+)", func, regex=True)
 
     return df
@@ -284,7 +288,9 @@ def get_scheduled_games(rating, team_id):
 
     df.sort_values(by="Date", inplace=True)
 
-    func = lambda m: add_link(m, rating)
+    def func(m):
+        return add_link(m, rating)
+
     df["Opponent"] = df["Opponent"].str.replace("(.+)", func, regex=True)
 
     return df
