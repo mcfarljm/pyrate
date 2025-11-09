@@ -7,7 +7,15 @@ from scipy.stats import gmean as geometric_mean
 
 from .ratingbase import RatingSystem
 
-def fixed_point_func(logr, double_games, get_win_count, get_available_win_array, func_count=[0], verbosity=0):
+
+def fixed_point_func(
+    logr,
+    double_games,
+    get_win_count,
+    get_available_win_array,
+    func_count,
+    verbosity=0,
+):
     """Function h(logr) = logr
 
     Parameters
@@ -18,14 +26,14 @@ def fixed_point_func(logr, double_games, get_win_count, get_available_win_array,
     """
     # Todo: vectorize or rewrite in C?
     if verbosity >= 2:
-        print('r input:', np.exp(logr))
+        print("r input:", np.exp(logr))
     result = np.empty(len(logr))
     ratings_full = np.exp(logr)
     for i, logri in enumerate(logr):
-        df = double_games[double_games['team_index'] == i]
-        rjs = ratings_full[df['opponent_index'].values]
+        df = double_games[double_games["team_index"] == i]
+        rjs = ratings_full[df["opponent_index"].values]
         # denom = sum( 1.0 / (ri + rjs) )
-        denom = sum( get_available_win_array(df) / (np.exp(logri) + rjs) )
+        denom = sum(get_available_win_array(df) / (np.exp(logri) + rjs))
         # if debug:
         #     print('avail wins:', i, get_available_win_array(df))
         # num = sum( df['result'] == 'W' )
@@ -35,44 +43,67 @@ def fixed_point_func(logr, double_games, get_win_count, get_available_win_array,
         result[i] = num / denom
     result = np.log(result)
     if verbosity >= 2:
-        print('r output:', np.exp(result))
+        print("r output:", np.exp(result))
     func_count[0] += 1
     return result
+
 
 class Wins:
     def __init__(self, win_value=1.0):
         if win_value > 1.0 or win_value < 0.0:
             raise ValueError
         self.win_value = win_value
+
     def win_count(self, games):
-        return sum(games['result'] == 'W') * self.win_value + sum(games['result']=='L') * (1.0 - self.win_value)
+        return sum(games["result"] == "W") * self.win_value + sum(
+            games["result"] == "L"
+        ) * (1.0 - self.win_value)
+
     def game_count_per_game(self, games):
         return 1.0
 
+
 class WeibullWins:
     """Construct win function from Weibull CDF curve"""
+
     def __init__(self, shape, scale):
         self.shape = shape
         self.scale = scale
+
     def cdf(self, x):
-        return 1.0 - np.exp( -(x/self.scale)**self.shape )
+        return 1.0 - np.exp(-((x / self.scale) ** self.shape))
+
     def __call__(self, x):
-        return 0.5 + np.sign(x) * 0.5*self.cdf(np.abs(x))
+        return 0.5 + np.sign(x) * 0.5 * self.cdf(np.abs(x))
+
     def win_count(self, games):
-        return sum( self( np.array( games['points'] - games['opponent_points'] ) ) )
+        return sum(self(np.array(games["points"] - games["opponent_points"])))
+
     def game_count_per_game(self, games):
         return 1.0
+
 
 class Points:
     def __init__(self):
         pass
+
     def win_count(self, games):
-        return sum(games['points'])
+        return sum(games["points"])
+
     def game_count_per_game(self, games):
-        return np.array(games['points'] + games['opponent_points'])
+        return np.array(games["points"] + games["opponent_points"])
+
 
 class MaximumLikelihood(RatingSystem):
-    def __init__(self, league, method=Wins(), tol=1e-8, train_interval=None, test_interval=None, verbosity=0):
+    def __init__(
+        self,
+        league,
+        method,
+        tol=1e-8,
+        train_interval=None,
+        test_interval=None,
+        verbosity=0,
+    ):
         """
         Parameters
         ----------
@@ -91,13 +122,15 @@ class MaximumLikelihood(RatingSystem):
         verbosity : int
             Control output verbosity
         """
-        super().__init__(league, train_interval=train_interval, test_interval=test_interval)
+        super().__init__(
+            league, train_interval=train_interval, test_interval=test_interval
+        )
         self.method = method
         self.verbosity = verbosity
 
         self.homecourt = False
 
-        self.double_games_train = self.double_games[self.double_games['train']]
+        self.double_games_train = self.double_games[self.double_games["train"]]
         self.fit_ratings(tol)
 
     def _initialize_ratings(self):
@@ -108,10 +141,10 @@ class MaximumLikelihood(RatingSystem):
             # Start with "modified" win/loss ratio:
             r0 = np.ones(len(self.df_teams))
             for i in range(len(self.df_teams)):
-                df = self.double_games_train[self.double_games_train['team_index'] == i]
-                w = self.method.win_count(df)
-                l = len(df) - w
-                r0[i] = w/l
+                df = self.double_games_train[self.double_games_train["team_index"] == i]
+                wins = self.method.win_count(df)
+                losses = len(df) - wins
+                r0[i] = wins / losses
             return r0
 
     def fit_ratings(self, tol):
@@ -121,7 +154,9 @@ class MaximumLikelihood(RatingSystem):
         to store the ratings and predictions.
         """
         # Copy used in case of modification
-        self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ].copy()
+        self.single_games = self.double_games[
+            self.double_games["team_id"] < self.double_games["opponent_id"]
+        ].copy()
 
         r0 = self._initialize_ratings()
         func_count = [0]
@@ -134,11 +169,24 @@ class MaximumLikelihood(RatingSystem):
         # Have seen problems when using the default solution method,
         # especially when adjusting the value per win (this was prior
         # to floating the last rating).
-        logr = scipy.optimize.fixed_point(fixed_point_func, np.log(r0), args=[self.double_games_train, self.method.win_count, self.method.game_count_per_game, func_count, self.verbosity], xtol=tol, method='iteration', maxiter=1000)
+        logr = scipy.optimize.fixed_point(
+            fixed_point_func,
+            np.log(r0),
+            args=[
+                self.double_games_train,
+                self.method.win_count,
+                self.method.game_count_per_game,
+                func_count,
+                self.verbosity,
+            ],
+            xtol=tol,
+            method="iteration",
+            maxiter=1000,
+        )
         r = np.exp(logr)
         self.function_count = func_count[0]
         if self.verbosity >= 1:
-            print('function calls:', self.function_count)
+            print("function calls:", self.function_count)
 
         # Rescale to geometric mean of 1
         r /= geometric_mean(r)
@@ -153,11 +201,11 @@ class MaximumLikelihood(RatingSystem):
 
     def predict_win_probability(self, games):
         """Predict win probability for each game in DataFrame"""
-        ri = self.df_teams.loc[games['team_id'],'rating'].values
-        p = ri / ( ri + self.df_teams.loc[games['opponent_id'],'rating'].values )
+        ri = self.df_teams.loc[games["team_id"], "rating"].values
+        p = ri / (ri + self.df_teams.loc[games["opponent_id"], "rating"].values)
         # Convert to Series for convenience
         return pd.Series(p, index=games.index)
 
     def predict_result(self, games):
         p = self.predict_win_probability(games)
-        return p.apply(lambda pi: 'W' if pi > 0.5 else 'L')
+        return p.apply(lambda pi: "W" if pi > 0.5 else "L")
