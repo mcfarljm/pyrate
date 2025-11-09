@@ -17,6 +17,11 @@ dependencies = [
     "sqlalchemy>=2.0.44",
 ]
 
+[project.optional-dependencies]
+sportsipy = [
+    "sportsipy>=0.6.0",
+]
+
 [dependency-groups]
 dev = [
     "ruff>=0.14.4",
