@@ -42,7 +42,6 @@ select = [
 ]
 
 ignore = [
-    "E501",  # Line length, todo
     "B905",  # Todo: use `strict` with zip
 ]
 

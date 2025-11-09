@@ -125,7 +125,7 @@ def get_rating_table(rating):
     query = """
     SELECT t.rank, t.name, t.wins, t.losses, t.rating, t.offense_rank, t.defense_rank, t.offense, t.defense, t.strength_of_schedule_past, t.strength_of_schedule_future
     FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
-    WHERE r.name = :rating;"""
+    WHERE r.name = :rating;"""  # noqa: E501
 
     df = pd.read_sql_query(text(query), db, params={"rating": rating})
     df.rename(
@@ -201,7 +201,7 @@ def get_team_data(rating, team_id):
     query = """
     SELECT t.rank, t.rating, t.wins, t.losses, t.expected_wins, t.expected_losses, t.offense_rank, t.defense_rank
     FROM teams t INNER JOIN ratings r ON t.rating_id = r.rating_id
-    WHERE t.team_id = :team_id AND r.name = :rating;"""
+    WHERE t.team_id = :team_id AND r.name = :rating;"""  # noqa: E501
     with db.connect() as conn:
         output = conn.execute(text(query), {"team_id": team_id, "rating": rating})
         result = output.fetchone()
@@ -220,7 +220,7 @@ def get_games_table(rating, team_id):
     FROM games g INNER JOIN teams t ON g.opponent_id = t.team_id
     INNER JOIN ratings r ON g.rating_id = r.rating_id
     WHERE r.name = :rating and g.team_id = :team_id AND t.rating_id = r.rating_id AND g.result IS NOT NULL;
-    """
+    """  # noqa: E501
 
     df = pd.read_sql_query(
         text(query),
@@ -264,7 +264,7 @@ def get_scheduled_games(rating, team_id):
     FROM games g INNER JOIN teams t ON g.opponent_id = t.team_id
     INNER JOIN ratings r ON g.rating_id = r.rating_id
     WHERE r.name = :rating and g.team_id = :team_id AND t.rating_id = r.rating_id AND g.result IS NULL;
-    """
+    """  # noqa: E501
 
     df = pd.read_sql_query(
         text(query),

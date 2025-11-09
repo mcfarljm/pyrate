@@ -125,9 +125,8 @@ class League:
         ]
 
     def summarize(self):
-        print(
-            f"League summary: {len(self.teams)} teams, {len(self.double_games) // 2} games"
-        )
+        print("League summary: ", end="")
+        print(f"{len(self.teams)} teams, {len(self.double_games) // 2} games")
 
     @classmethod
     def from_hyper_table(cls, df_games, df_teams=None):
@@ -371,7 +370,7 @@ class RatingSystem:
         return correct, total
 
     def log_likelihood(self, exclude_train=False):
-        """Evaluate log of likelihood of outcomes based on predicted win probabilities"""
+        """Evaluate log of likelihood of outcomes based on predicted win probabilities"""  # noqa: E501
         games = self.double_games[
             self.double_games["team_id"] < self.double_games["opponent_id"]
         ]
@@ -412,8 +411,9 @@ class RatingSystem:
 
         print("Total count:", total_count)
         for i, p in enumerate(pvals):
+            coverage = float(correct[i]) / counts[i]
             print(
-                f"Coverage for {p}: {correct[i]} / {counts[i]} ({float(correct[i]) / counts[i]:.2})"
+                f"Coverage for {p}: {correct[i]} / {counts[i]} ({coverage:.2})"
             )
 
     def to_db(self, engine, rating_name, finished=False):
