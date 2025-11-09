@@ -15,11 +15,13 @@ def rank_array(a, descending=True):
     if descending:
         temp = temp[::-1]
     ranks = np.empty_like(temp)
-    ranks[temp] = np.arange(1,len(a)+1)
+    ranks[temp] = np.arange(1, len(a) + 1)
     return ranks
+
 
 class League:
     """Data structure to hold score and schedule data"""
+
     def __init__(self, df_games, df_teams=None, duplicated_games=True):
         """Create League instance
 
@@ -33,71 +35,99 @@ class League:
         duplicated_games : bool
             Whether each game is represented twice, once for each team
         """
-        if 'team_id' not in df_games:
+        if "team_id" not in df_games:
             raise ValueError("expected 'team_id' column")
-        elif 'points' not in df_games:
+        elif "points" not in df_games:
             raise ValueError("expected 'points' column")
-        elif 'opponent_id' not in df_games:
+        elif "opponent_id" not in df_games:
             raise ValueError("expected 'opponent_id' column")
-        elif 'opponent_points' not in df_games:
+        elif "opponent_points" not in df_games:
             raise ValueError("expected 'opponent_points' column")
 
         if not duplicated_games:
-            df2 = df_games.rename(columns={'team_id':'opponent_id', 'opponent_id':'team_id',
-                                           'points':'opponent_points','opponent_points':'points',
-                                           'location':'opponent_location','opponent_location':'location'})
-            df_games = pd.concat((df_games,df2), join='inner')
+            df2 = df_games.rename(
+                columns={
+                    "team_id": "opponent_id",
+                    "opponent_id": "team_id",
+                    "points": "opponent_points",
+                    "opponent_points": "points",
+                    "location": "opponent_location",
+                    "opponent_location": "location",
+                }
+            )
+            df_games = pd.concat((df_games, df2), join="inner")
 
         # Note: although for interactive use, indexing by name is
         # convenient, currently index by id to cover case where names
         # are not provided (and maybe it provides faster lookup?)
         if df_teams is None:
-            self.teams = pd.DataFrame(index=np.sort(df_games['team_id'].unique()))
+            self.teams = pd.DataFrame(index=np.sort(df_games["team_id"].unique()))
         else:
             # Here we retain only teams that are referenced in
             # df_games.  Note this does not necessarily mean all teams
             # have data for played games (could be scheduled games
             # only).
-            self.teams = df_teams.loc[df_games['team_id'].unique()]
+            self.teams = df_teams.loc[df_games["team_id"].unique()]
             # print('len teams before, after:', len(df_teams), len(self.teams))
 
         # Drop teams with no played games.  (May be a way to clean
         # this up a little; currently requires recomputing the set of
         # unplayed games.)
-        unplayed = (df_games['points'].isnull() | df_games['opponent_points'].isnull())
-        self.teams = self.teams.loc[[t for t in self.teams.index if sum(df_games.loc[~unplayed,'team_id']==t) > 0]]
+        unplayed = df_games["points"].isnull() | df_games["opponent_points"].isnull()
+        self.teams = self.teams.loc[
+            [
+                t
+                for t in self.teams.index
+                if sum(df_games.loc[~unplayed, "team_id"] == t) > 0
+            ]
+        ]
         # And remove remnants from the games data frame (i.e.,
         # scheduled games for teams that haven't played yet, which
         # will cause problems in the indexing below)
         df_games = df_games.copy()
-        df_games = df_games.loc[df_games['team_id'].isin(self.teams.index),:]
-        df_games = df_games.loc[df_games['opponent_id'].isin(self.teams.index),:]
+        df_games = df_games.loc[df_games["team_id"].isin(self.teams.index), :]
+        df_games = df_games.loc[df_games["opponent_id"].isin(self.teams.index), :]
 
         team_ids = list(self.teams.index)
-        df_games['team_index'] = df_games['team_id'].apply(lambda x: team_ids.index(x))
-        df_games['opponent_index'] = df_games['opponent_id'].apply(lambda x: team_ids.index(x))
+        df_games["team_index"] = df_games["team_id"].apply(lambda x: team_ids.index(x))
+        df_games["opponent_index"] = df_games["opponent_id"].apply(
+            lambda x: team_ids.index(x)
+        )
 
         # Split up into games and schedule
-        unplayed = (df_games['points'].isnull() | df_games['opponent_points'].isnull())
+        unplayed = df_games["points"].isnull() | df_games["opponent_points"].isnull()
         self.double_games = df_games[~unplayed].copy()
         self.double_schedule = df_games[unplayed].copy()
-        self.double_games = self.double_games.astype({'points':'int32', 'opponent_points':'int32'})
+        self.double_games = self.double_games.astype(
+            {"points": "int32", "opponent_points": "int32"}
+        )
 
         def get_wl(row):
-            if row['points'] > row['opponent_points']:
-                return 'W'
-            elif row['points'] < row['opponent_points']:
-                return 'L'
+            if row["points"] > row["opponent_points"]:
+                return "W"
+            elif row["points"] < row["opponent_points"]:
+                return "L"
             else:
-                return 'T'
-        self.double_games['result'] = self.double_games.apply(get_wl, axis=1)
+                return "T"
 
-        self.teams['wins'] = [sum(self.double_games.loc[self.double_games['team_id'] == tid, 'result'] == 'W') for tid in self.teams.index]
-        self.teams['losses'] = [sum(self.double_games['team_id']==tid) - self.teams.at[tid,'wins'] for tid in self.teams.index]
+        self.double_games["result"] = self.double_games.apply(get_wl, axis=1)
+
+        self.teams["wins"] = [
+            sum(
+                self.double_games.loc[self.double_games["team_id"] == tid, "result"]
+                == "W"
+            )
+            for tid in self.teams.index
+        ]
+        self.teams["losses"] = [
+            sum(self.double_games["team_id"] == tid) - self.teams.at[tid, "wins"]
+            for tid in self.teams.index
+        ]
 
     def summarize(self):
-        print(f'League summary: {len(self.teams)} teams, {len(self.double_games)//2} games')
-
+        print(
+            f"League summary: {len(self.teams)} teams, {len(self.double_games) // 2} games"
+        )
 
     @classmethod
     def from_hyper_table(cls, df_games, df_teams=None):
@@ -111,26 +141,30 @@ class League:
             Optional columns are 'date', 'location' ('H', 'A', and
             'N').
         """
-        if 'team_id' not in df_games:
+        if "team_id" not in df_games:
             raise ValueError("expected 'team_id' column")
-        elif 'game_id' not in df_games:
+        elif "game_id" not in df_games:
             raise ValueError("expected 'game_id' column")
-        elif 'points' not in df_games:
+        elif "points" not in df_games:
             raise ValueError("expected 'points' column")
 
         num_rows = len(df_games)
         if num_rows % 2 != 0:
             raise ValueError("expected even number of rows")
 
-        games = df_games.set_index('game_id')
-        games = games.join(games, rsuffix='2')
+        games = df_games.set_index("game_id")
+        games = games.join(games, rsuffix="2")
         # Each index was originally represented twice, so after join
         # now appears 4 times, 2 combinations of which are not valid
-        games = games[games['team_id'] != games['team_id2']]
+        games = games[games["team_id"] != games["team_id2"]]
         # Now have double-games format; rename the columns
-        games = games.rename(columns={'team_id2':'opponent_id',
-                                      'points2':'opponent_points',
-                                      'location2':'opponent_location'})
+        games = games.rename(
+            columns={
+                "team_id2": "opponent_id",
+                "points2": "opponent_points",
+                "location2": "opponent_location",
+            }
+        )
         if len(games) != num_rows:
             # If there is a mismatch, game_id's not appearing twice
             # get dropped by the join
@@ -138,14 +172,17 @@ class League:
 
         # For compatibility with Massey data, treat 0 points as
         # scheduled game (could be added as a flag)
-        scheduled = (games['points'] == 0) & (games['opponent_points'] == 0)
-        games.loc[scheduled,['points','opponent_points']] = np.nan # Flag scheduled games
+        scheduled = (games["points"] == 0) & (games["opponent_points"] == 0)
+        games.loc[scheduled, ["points", "opponent_points"]] = (
+            np.nan
+        )  # Flag scheduled games
 
         return cls(games, df_teams)
 
 
 class RatingSystem:
     """Base class for rating system"""
+
     def __init__(self, league, train_interval=None, test_interval=None):
         """Base class initialization called by child classes
 
@@ -172,56 +209,61 @@ class RatingSystem:
         # once that is done.
         self.double_games = league.double_games
         self.double_schedule = league.double_schedule
-        self.single_schedule = self.double_schedule[ self.double_schedule['team_id'] < self.double_schedule['opponent_id'] ]
+        self.single_schedule = self.double_schedule[
+            self.double_schedule["team_id"] < self.double_schedule["opponent_id"]
+        ]
 
         # Flagging the train/test set is a little tricky because we
         # work with double games.  To handle this, we can set it based
         # on the DataFrame index, which is unique by game.
         if train_interval:
-            self.double_games['train'] = False
-            self.double_games.loc[self.double_games.index.unique()[::train_interval], 'train'] = True
+            self.double_games["train"] = False
+            self.double_games.loc[
+                self.double_games.index.unique()[::train_interval], "train"
+            ] = True
         elif test_interval:
-            self.double_games['train'] = True
-            self.double_games.loc[self.double_games.index.unique()[::test_interval], 'train'] = False
+            self.double_games["train"] = True
+            self.double_games.loc[
+                self.double_games.index.unique()[::test_interval], "train"
+            ] = False
         else:
-            self.double_games['train'] = True
+            self.double_games["train"] = True
 
     def summarize(self):
         """Print summary information to screen"""
-        cv_flag = (not self.double_games['train'].all())
+        cv_flag = not self.double_games["train"].all()
 
-        print(f'{len(self.double_games)//2} played games')
+        print(f"{len(self.double_games) // 2} played games")
         if cv_flag:
-            print('{} trained games'.format(sum(self.double_games['train'])//2))
-        num_sched = len(self.double_schedule)//2
+            print("{} trained games".format(sum(self.double_games["train"]) // 2))
+        num_sched = len(self.double_schedule) // 2
         if num_sched > 0:
-            print(f'{num_sched} scheduled games')
+            print(f"{num_sched} scheduled games")
 
         if self.homecourt:
-            print(f'home advantage: {self.home_adv:.1f}')
+            print(f"home advantage: {self.home_adv:.1f}")
 
-        print(f'Consistency: {self.consistency:.3f}')
-        if hasattr(self, 'loo_consistency'):
-            print(f'LOO consistency: {self.loo_consistency:.3f}')
+        print(f"Consistency: {self.consistency:.3f}")
+        if hasattr(self, "loo_consistency"):
+            print(f"LOO consistency: {self.loo_consistency:.3f}")
         if cv_flag:
             correct, total = self.evaluate_predicted_wins(exclude_train=True)
-            print(f'CV consistency: {correct/total:.3f}')
+            print(f"CV consistency: {correct / total:.3f}")
         if self.full_rank:
-            print(f'Log lhood: {self.log_likelihood():.3f}')
+            print(f"Log lhood: {self.log_likelihood():.3f}")
         if cv_flag:
-            print(f'CV log lhood: {self.log_likelihood(exclude_train=True):.3f}')
-        
+            print(f"CV log lhood: {self.log_likelihood(exclude_train=True):.3f}")
 
     def store_ratings(self, ratings, offense=None, defense=None):
         """After child method is called, organize rating data into DataFrame"""
-        self.df_teams['rating'] = ratings
-        self.df_teams['rank'] = rank_array(ratings)
+        self.df_teams["rating"] = ratings
+        self.df_teams["rank"] = rank_array(ratings)
         if offense is not None:
-            self.df_teams['offense'] = offense
-            self.df_teams['offense_rank'] = rank_array(offense)
+            self.df_teams["offense"] = offense
+            self.df_teams["offense_rank"] = rank_array(offense)
         if defense is not None:
-            self.df_teams['defense'] = defense
-            self.df_teams['defense_rank'] = rank_array(defense)
+            self.df_teams["defense"] = defense
+            self.df_teams["defense_rank"] = rank_array(defense)
 
         self.get_strength_of_schedule()
 
@@ -232,59 +274,116 @@ class RatingSystem:
         array of opponent ratings.
 
         For now, does not account for home court"""
-        self.df_teams['strength_of_schedule_past'] = np.nan
-        self.df_teams['strength_of_schedule_future'] = np.nan
-        self.df_teams['strength_of_schedule_all'] = np.nan
-        for team_id,team in self.df_teams.iterrows():
-            games = self.double_games[self.double_games['team_id'] == team_id]
-            schedule = self.double_schedule[self.double_schedule['team_id'] == team_id]
-            self.df_teams.at[team_id,'strength_of_schedule_past'] = self.strength_of_schedule(self.df_teams.loc[games['opponent_id'],'rating'])
+        self.df_teams["strength_of_schedule_past"] = np.nan
+        self.df_teams["strength_of_schedule_future"] = np.nan
+        self.df_teams["strength_of_schedule_all"] = np.nan
+        for team_id, team in self.df_teams.iterrows():
+            games = self.double_games[self.double_games["team_id"] == team_id]
+            schedule = self.double_schedule[self.double_schedule["team_id"] == team_id]
+            self.df_teams.at[team_id, "strength_of_schedule_past"] = (
+                self.strength_of_schedule(
+                    self.df_teams.loc[games["opponent_id"], "rating"]
+                )
+            )
             if len(schedule) > 0:
-                self.df_teams.at[team_id,'strength_of_schedule_future'] = self.strength_of_schedule(self.df_teams.loc[schedule['opponent_id'],'rating'])
+                self.df_teams.at[team_id, "strength_of_schedule_future"] = (
+                    self.strength_of_schedule(
+                        self.df_teams.loc[schedule["opponent_id"], "rating"]
+                    )
+                )
             else:
-                self.df_teams.at[team_id,'strength_of_schedule_future'] = np.nan
-            self.df_teams.at[team_id,'strength_of_schedule_all'] = self.strength_of_schedule(self.df_teams.loc[np.concatenate((games['opponent_id'],schedule['opponent_id'])),'rating'])
+                self.df_teams.at[team_id, "strength_of_schedule_future"] = np.nan
+            self.df_teams.at[team_id, "strength_of_schedule_all"] = (
+                self.strength_of_schedule(
+                    self.df_teams.loc[
+                        np.concatenate((games["opponent_id"], schedule["opponent_id"])),
+                        "rating",
+                    ]
+                )
+            )
 
     def display_ratings(self, n=10):
-        print(self.df_teams.sort_values(by='rating', ascending=False).head(n))
+        print(self.df_teams.sort_values(by="rating", ascending=False).head(n))
 
     def store_predictions(self):
         """Compute and store predictions for scheduled games"""
-        self.double_games['predicted_result'] = self.predict_result(self.double_games)
-        self.double_games['win_probability'] = self.predict_win_probability(self.double_games)
-        self.double_schedule['win_probability'] = self.predict_win_probability(self.double_schedule)
-        self.consistency = sum(self.double_games['predicted_result']==self.double_games['result']) / float(len(self.double_games))
-        if hasattr(self, 'single_games') and 'loo_predicted_result' in self.single_games:
-            games = self.single_games[self.single_games['train']]
-            self.loo_consistency = sum(games['loo_predicted_result']==games['result']) / float(len(games))
+        self.double_games["predicted_result"] = self.predict_result(self.double_games)
+        self.double_games["win_probability"] = self.predict_win_probability(
+            self.double_games
+        )
+        self.double_schedule["win_probability"] = self.predict_win_probability(
+            self.double_schedule
+        )
+        self.consistency = sum(
+            self.double_games["predicted_result"] == self.double_games["result"]
+        ) / float(len(self.double_games))
+        if (
+            hasattr(self, "single_games")
+            and "loo_predicted_result" in self.single_games
+        ):
+            games = self.single_games[self.single_games["train"]]
+            self.loo_consistency = sum(
+                games["loo_predicted_result"] == games["result"]
+            ) / float(len(games))
 
         # Expected wins, losses:
-        if all(self.double_schedule['win_probability'].notnull()):
-            exp_wins = [int(round(sum(self.double_schedule.loc[self.double_schedule['team_id']== tid,'win_probability']))) + self.df_teams.at[tid,'wins'] for tid in self.df_teams.index]
+        if all(self.double_schedule["win_probability"].notnull()):
+            exp_wins = [
+                int(
+                    round(
+                        sum(
+                            self.double_schedule.loc[
+                                self.double_schedule["team_id"] == tid,
+                                "win_probability",
+                            ]
+                        )
+                    )
+                )
+                + self.df_teams.at[tid, "wins"]
+                for tid in self.df_teams.index
+            ]
 
-            self.df_teams['expected_losses'] = [sum(self.double_games['team_id']==tid) + sum(self.double_schedule['team_id']==tid) - exp_wins[i] for i,tid in enumerate(self.df_teams.index)]
-            self.df_teams['expected_wins'] = exp_wins
+            self.df_teams["expected_losses"] = [
+                sum(self.double_games["team_id"] == tid)
+                + sum(self.double_schedule["team_id"] == tid)
+                - exp_wins[i]
+                for i, tid in enumerate(self.df_teams.index)
+            ]
+            self.df_teams["expected_wins"] = exp_wins
 
     def evaluate_predicted_wins(self, exclude_train=False):
         """Evaluate how many past games are predicted correctly"""
         if exclude_train:
-            idx = ~ self.double_games['train']
+            idx = ~self.double_games["train"]
         else:
             # Set idx to all True
-            idx = self.double_games['train'].notnull()
+            idx = self.double_games["train"].notnull()
 
-        correct = sum( self.double_games.loc[idx,'predicted_result'] == self.double_games.loc[idx,'result'] ) // 2
+        correct = (
+            sum(
+                self.double_games.loc[idx, "predicted_result"]
+                == self.double_games.loc[idx, "result"]
+            )
+            // 2
+        )
         total = sum(idx) // 2
 
         return correct, total
 
     def log_likelihood(self, exclude_train=False):
         """Evaluate log of likelihood of outcomes based on predicted win probabilities"""
-        games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ]
+        games = self.double_games[
+            self.double_games["team_id"] < self.double_games["opponent_id"]
+        ]
         if exclude_train:
-            games = games[~ games['train']]
+            games = games[~games["train"]]
 
-        pvals = games.apply(lambda r: r['win_probability'] if r['result']=='W' else 1.0 - r['win_probability'], axis=1)
+        pvals = games.apply(
+            lambda r: r["win_probability"]
+            if r["result"] == "W"
+            else 1.0 - r["win_probability"],
+            axis=1,
+        )
         return sum(np.log(pvals))
 
     def evaluate_coverage_probability(self, exclude_train=False):
@@ -292,28 +391,30 @@ class RatingSystem:
         counts = np.zeros(len(pvals), dtype=int)
         correct = np.zeros(len(pvals), dtype=int)
 
-        total_count = 0 # Sanity check
+        total_count = 0  # Sanity check
 
         # Use double games for book-keeping simplicity...
         if exclude_train:
-            games = self.double_games[self.double_games['train']]
+            games = self.double_games[self.double_games["train"]]
         else:
             games = self.double_games
 
         pred_probs = self.predict_win_probability(games)
-        pred_outcomes = ['W' if p>0.5 else 'L' for p in pred_probs]
-        for p,wl,(index,game) in zip(pred_probs,pred_outcomes,games.iterrows()):
+        pred_outcomes = ["W" if p > 0.5 else "L" for p in pred_probs]
+        for p, wl, (index, game) in zip(pred_probs, pred_outcomes, games.iterrows()):
             if p > 0.5:
                 total_count += 1
                 # Determine interval
-                interval = np.where(p>pvals)[0][-1]
+                interval = np.where(p > pvals)[0][-1]
                 counts[interval] += 1
-                if wl == game['result']:
+                if wl == game["result"]:
                     correct[interval] += 1
 
         print("Total count:", total_count)
-        for i,p in enumerate(pvals):
-            print(f'Coverage for {p}: {correct[i]} / {counts[i]} ({float(correct[i])/counts[i]:.2})')
+        for i, p in enumerate(pvals):
+            print(
+                f"Coverage for {p}: {correct[i]} / {counts[i]} ({float(correct[i]) / counts[i]:.2})"
+            )
 
     def to_db(self, engine, rating_name, finished=False):
         """Write to database
@@ -331,13 +432,13 @@ class RatingSystem:
         """
 
         with engine.connect() as conn:
-            for s in schema.split('\n\n'):
+            for s in schema.split("\n\n"):
                 conn.execute(s)
 
             ## properties table (general info)
             today = pd.to_datetime(datetime.datetime.today())
-            df = pd.DataFrame({'Updated':[today]})
-            df.to_sql("properties", engine, if_exists='replace', index=False)
+            df = pd.DataFrame({"Updated": [today]})
+            df.to_sql("properties", engine, if_exists="replace", index=False)
 
             ### ratings table
             # Needs to be handled carefully because previous rating_id
@@ -346,13 +447,15 @@ class RatingSystem:
             # already exists
 
             # Check whether rating exists:
-            output = conn.execute('SELECT rating_id FROM ratings WHERE name=?', (rating_name,))
+            output = conn.execute(
+                "SELECT rating_id FROM ratings WHERE name=?", (rating_name,)
+            )
             result = output.fetchone()
             if result:
                 rating_id = result[0]
             else:
-                conn.execute('INSERT INTO ratings (name) VALUES (?);', (rating_name,))
-                output = conn.execute('SELECT last_insert_rowid();')
+                conn.execute("INSERT INTO ratings (name) VALUES (?);", (rating_name,))
+                output = conn.execute("SELECT last_insert_rowid();")
                 rating_id = output.fetchone()[0]
 
             # Now update rating_id with new data.  Re-using the
@@ -362,59 +465,106 @@ class RatingSystem:
             # a new arbitrary rating_id before adding the data)
             n_games = len(self.double_games) // 2
             n_scheduled = len(self.double_schedule) // 2
-            Rsquared = self.Rsquared if hasattr(self, 'Rsquared') else None
-            conn.execute('UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=?, games_played = ?, games_scheduled = ?, finished = ? WHERE rating_id = ?;', (self.home_adv, Rsquared, self.consistency, n_games, n_scheduled, finished, rating_id))
+            Rsquared = self.Rsquared if hasattr(self, "Rsquared") else None
+            conn.execute(
+                "UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=?, games_played = ?, games_scheduled = ?, finished = ? WHERE rating_id = ?;",
+                (
+                    self.home_adv,
+                    Rsquared,
+                    self.consistency,
+                    n_games,
+                    n_scheduled,
+                    finished,
+                    rating_id,
+                ),
+            )
 
             ### teams table
             df = self.df_teams.copy()
-            df['rating_id'] = rating_id
-            df['team_id'] = df.index
+            df["rating_id"] = rating_id
+            df["team_id"] = df.index
 
             # First delete previous entries for this league:
-            conn.execute('DELETE FROM teams WHERE rating_id=?;', (rating_id,))
+            conn.execute("DELETE FROM teams WHERE rating_id=?;", (rating_id,))
 
-            df.to_sql("teams", engine, if_exists='append', index=False,
-                      dtype = {'team_id': sqlt.Integer,
-                               'rating_id': sqlt.Integer,
-                               'name': sqlt.Text,
-                               'rating': sqlt.Float,
-                               'rank': sqlt.Integer,
-                               'wins': sqlt.Integer,
-                               'losses': sqlt.Integer,
-                               'expected_wins': sqlt.Integer,
-                               'expected_losses': sqlt.Integer,
-                               'offense_rank': sqlt.Integer,
-                               'defense_rank': sqlt.Integer})
+            df.to_sql(
+                "teams",
+                engine,
+                if_exists="append",
+                index=False,
+                dtype={
+                    "team_id": sqlt.Integer,
+                    "rating_id": sqlt.Integer,
+                    "name": sqlt.Text,
+                    "rating": sqlt.Float,
+                    "rank": sqlt.Integer,
+                    "wins": sqlt.Integer,
+                    "losses": sqlt.Integer,
+                    "expected_wins": sqlt.Integer,
+                    "expected_losses": sqlt.Integer,
+                    "offense_rank": sqlt.Integer,
+                    "defense_rank": sqlt.Integer,
+                },
+            )
 
             ### games table
             # Using reindex both selects columns and creates NA
             # columns if not present (using .loc for this will trigger
             # a warning if requested columns are not present)
-            df = self.double_games.reindex(columns=['team_id','opponent_id','points','opponent_points','location','date','normalized_score','result','win_probability'])
-            df['rating_id'] = rating_id
+            df = self.double_games.reindex(
+                columns=[
+                    "team_id",
+                    "opponent_id",
+                    "points",
+                    "opponent_points",
+                    "location",
+                    "date",
+                    "normalized_score",
+                    "result",
+                    "win_probability",
+                ]
+            )
+            df["rating_id"] = rating_id
 
-            df.rename(columns={'points':'points_for',
-                               'opponent_points':'points_against'},
-                      inplace=True)
+            df.rename(
+                columns={"points": "points_for", "opponent_points": "points_against"},
+                inplace=True,
+            )
 
             # First delete previous entries for this league:
-            conn.execute('DELETE FROM games WHERE rating_id=?;', (rating_id,))
+            conn.execute("DELETE FROM games WHERE rating_id=?;", (rating_id,))
 
-            df.to_sql("games", engine, if_exists='append', index=False,
-                      dtype = {'team_id': sqlt.Integer,
-                               'rating_id': sqlt.Integer,
-                               'opponent_id': sqlt.Integer,
-                               'points_for': sqlt.Integer,
-                               'points_against': sqlt.Integer,
-                               'date': sqlt.Date,
-                               'normalized_score': sqlt.Float})
+            df.to_sql(
+                "games",
+                engine,
+                if_exists="append",
+                index=False,
+                dtype={
+                    "team_id": sqlt.Integer,
+                    "rating_id": sqlt.Integer,
+                    "opponent_id": sqlt.Integer,
+                    "points_for": sqlt.Integer,
+                    "points_against": sqlt.Integer,
+                    "date": sqlt.Date,
+                    "normalized_score": sqlt.Float,
+                },
+            )
 
             # scheduled games
-            df = self.double_schedule.loc[:,['team_id','opponent_id','location','date','win_probability']]
-            df['rating_id'] = rating_id
+            df = self.double_schedule.loc[
+                :, ["team_id", "opponent_id", "location", "date", "win_probability"]
+            ]
+            df["rating_id"] = rating_id
 
-            df.to_sql("games", engine, if_exists='append', index=False,
-                      dtype = {'team_id': sqlt.Integer,
-                               'rating_id': sqlt.Integer,
-                               'opponent_id': sqlt.Integer,
-                               'date': sqlt.Date})
+            df.to_sql(
+                "games",
+                engine,
+                if_exists="append",
+                index=False,
+                dtype={
+                    "team_id": sqlt.Integer,
+                    "rating_id": sqlt.Integer,
+                    "opponent_id": sqlt.Integer,
+                    "date": sqlt.Date,
+                },
+            )

@@ -13,10 +13,12 @@ except ImportError:
 from . import gom
 from .ratingbase import RatingSystem
 
-loc_map = {'H': 1, 'A': -1, 'N': 0}
+loc_map = {"H": 1, "A": -1, "N": 0}
+
 
 class LeastSquaresError(Exception):
     pass
+
 
 def fit_linear_least_squares(X, y, weights=None):
     """Fit linear model
@@ -27,12 +29,12 @@ def fit_linear_least_squares(X, y, weights=None):
     XXinv : array
         Inverse of (X*transpose(X)), or None if system is not full rank
     """
-    num_coefs = np.size(X,1)
+    num_coefs = np.size(X, 1)
     if weights is not None:
         rtw = np.diag(np.sqrt(weights))
         X = np.dot(rtw, X)
         y = np.dot(rtw, y)
-    underdetermined = (len(y) < num_coefs)
+    underdetermined = len(y) < num_coefs
     if underdetermined:
         # For underdetermined systems, we need to size y based on
         # num_coefs (probably due to how lapack overwrites "b" in
@@ -40,7 +42,7 @@ def fit_linear_least_squares(X, y, weights=None):
         y = np.resize(y, num_coefs)
     # print('solving:', np.shape(X), np.shape(y))
     # print('rank:', np.linalg.matrix_rank(X))
-    lqr,coefs,info = scipy.linalg.lapack.dgels(X, y)
+    lqr, coefs, info = scipy.linalg.lapack.dgels(X, y)
     if info == 0 and max(np.abs(coefs)) > 10000:
         # Check for a numerically ill-conditioned solution.  An
         # alternative would be to check np.linalg.matrix_rank.  In
@@ -54,8 +56,8 @@ def fit_linear_least_squares(X, y, weights=None):
         if underdetermined:
             XXinv = None
         else:
-            XXinv = lqr[:num_coefs,:]
-            XXinv,info = scipy.linalg.lapack.dpotri(XXinv,lower=0,overwrite_c=1)
+            XXinv = lqr[:num_coefs, :]
+            XXinv, info = scipy.linalg.lapack.dpotri(XXinv, lower=0, overwrite_c=1)
             # Copy upper to lower triangle
             i_lower = np.tril_indices(len(XXinv), -1)
             XXinv[i_lower] = XXinv.T[i_lower]
@@ -70,19 +72,30 @@ def fit_linear_least_squares(X, y, weights=None):
 
     return coefs, XXinv
 
+
 def test_weight_func(games):
-    return np.repeat(.2, len(games))
+    return np.repeat(0.2, len(games))
     # weights = np.ones(len(games))
     # weights[:len(games)//2] = .5
     # return weights
 
+
 def test_weight_func2(games):
     weights = np.ones(len(games))
-    weights[np.abs(games['points'] - games['opponent_points']) > 17] = 0.3
+    weights[np.abs(games["points"] - games["opponent_points"]) > 17] = 0.3
     return weights
 
+
 class LeastSquares(RatingSystem):
-    def __init__(self, league, homecourt=False, game_outcome_measure=None, weight_function=None, train_interval=None, test_interval=None):
+    def __init__(
+        self,
+        league,
+        homecourt=False,
+        game_outcome_measure=None,
+        weight_function=None,
+        train_interval=None,
+        test_interval=None,
+    ):
         """
         Parameters
         ----------
@@ -103,7 +116,9 @@ class LeastSquares(RatingSystem):
         test_interval : int or None
             See RatingSystem
         """
-        super().__init__(league, train_interval=train_interval, test_interval=test_interval)
+        super().__init__(
+            league, train_interval=train_interval, test_interval=test_interval
+        )
         self.homecourt = homecourt
         if game_outcome_measure is None:
             self.gom = gom.PointDifference()
@@ -125,21 +140,25 @@ class LeastSquares(RatingSystem):
         # Need game outcome measure and normalized score to be stored
         # in double_games.  Compute them directly for simplicity, even
         # though half of calc's are redundant.
-        points = self.double_games['points'] - self.double_games['opponent_points']
-        self.double_games['GOM'] = self.gom(points)
-        self.double_games = self.double_games.astype({'GOM':'float64'})
+        points = self.double_games["points"] - self.double_games["opponent_points"]
+        self.double_games["GOM"] = self.gom(points)
+        self.double_games = self.double_games.astype({"GOM": "float64"})
 
         # Copy is used here so that loo_predicted_results can be added:
-        self.single_games = self.double_games[ self.double_games['team_id'] < self.double_games['opponent_id'] ].copy()
+        self.single_games = self.double_games[
+            self.double_games["team_id"] < self.double_games["opponent_id"]
+        ].copy()
 
-        games = self.single_games[self.single_games['train']]
+        games = self.single_games[self.single_games["train"]]
 
         X = self.get_basis_matrix(games)
         if self.weight_function:
             weights = self.weight_function(self.single_games)
         else:
             weights = None
-        ratings, self.XXinv = fit_linear_least_squares(X, games['GOM'].values, weights=weights)
+        ratings, self.XXinv = fit_linear_least_squares(
+            X, games["GOM"].values, weights=weights
+        )
         self.full_rank = self.XXinv is not None
 
         if self.weight_function:
@@ -150,7 +169,7 @@ class LeastSquares(RatingSystem):
         else:
             double_weights = None
 
-        residuals = games['GOM'] - np.dot(X, ratings)
+        residuals = games["GOM"] - np.dot(X, ratings)
 
         if self.homecourt:
             self.home_adv = ratings[-1]
@@ -158,27 +177,34 @@ class LeastSquares(RatingSystem):
         else:
             self.home_adv = None
 
-        ratings = np.append(ratings, 0) # Add 0 rating for last team
-        ratings -= np.mean(ratings) # Renormalize
+        ratings = np.append(ratings, 0)  # Add 0 rating for last team
+        ratings -= np.mean(ratings)  # Renormalize
 
         if self.gom.supports_off_def:
-            offense, defense = self.get_offense_defense(self.double_games[self.double_games['train']], ratings, double_weights)
+            offense, defense = self.get_offense_defense(
+                self.double_games[self.double_games["train"]], ratings, double_weights
+            )
         else:
             offense, defense = None, None
 
         # Store normalized score:
-        self.double_games['normalized_score'] = self.double_games['GOM'] + ratings[self.double_games['opponent_index'].values]
+        self.double_games["normalized_score"] = (
+            self.double_games["GOM"]
+            + ratings[self.double_games["opponent_index"].values]
+        )
         if self.homecourt:
-            self.double_games['normalized_score'] -= self.double_games['location'].map(loc_map) * self.home_adv
+            self.double_games["normalized_score"] -= (
+                self.double_games["location"].map(loc_map) * self.home_adv
+            )
 
         # Estimate R-squared and residual standard deviation, which
         # can be used in probability calculations.  Since the model
         # does not include an intercept term, we compute SST without
         # subtracting the mean of the dependent variable.
         weights = self.weights if self.weight_function else 1.0
-        SST = sum( games['GOM']**2 * weights )
-        SSE = sum( residuals**2 * weights )
-        self.Rsquared = 1.0 - SSE/SST
+        SST = sum(games["GOM"] ** 2 * weights)
+        SSE = sum(residuals**2 * weights)
+        self.Rsquared = 1.0 - SSE / SST
 
         # DOF: number of observations less model parameters.  There is
         # one less parameter than teams because one rating is
@@ -195,12 +221,12 @@ class LeastSquares(RatingSystem):
             # https://en.wikipedia.org/wiki/Weighted_arithmetic_mean#Reliability_weights,
             # after using an ad-hoc modification to try and extend it
             # toward multiple lost degrees of freedom.
-            dof = V2/V1 *(V1**2 / V2 - nparam)
+            dof = V2 / V1 * (V1**2 / V2 - nparam)
         else:
             dof = len(games) - nparam
 
         if dof > 0:
-            self.sigma = np.sqrt( SSE / dof )
+            self.sigma = np.sqrt(SSE / dof)
 
         if dof > 0 and self.full_rank:
             self.leverages = np.array([np.dot(np.dot(x, self.XXinv), x) for x in X])
@@ -226,14 +252,14 @@ class LeastSquares(RatingSystem):
         # Use float dtype for consistency with GOM in least squares
         # solve, just to be safe, although doesn't seem to be strictly
         # necessary.
-        X = np.zeros((ngame,nvar), dtype='float64')
-        X[np.arange(ngame), games['team_index']] = 1
-        X[np.arange(ngame), games['opponent_index']] = -1
+        X = np.zeros((ngame, nvar), dtype="float64")
+        X[np.arange(ngame), games["team_index"]] = 1
+        X[np.arange(ngame), games["opponent_index"]] = -1
         # One rating is redundant, so assume rating of last team is 0
-        X = np.delete(X, nteam-1, axis=1)
+        X = np.delete(X, nteam - 1, axis=1)
 
         if self.homecourt:
-            X[:,-1] = games['location'].map(loc_map)
+            X[:, -1] = games["location"].map(loc_map)
 
         return X
 
@@ -248,9 +274,9 @@ class LeastSquares(RatingSystem):
         # Use float dtype for consistency with GOM in least squares
         # solve, just to be safe, although doesn't seem to be strictly
         # necessary.
-        X = np.zeros((ngame,nvar), dtype='float64')
-        X[np.arange(ngame), double_games['team_index']] = 1
-        X[np.arange(ngame), double_games['opponent_index']] = 1
+        X = np.zeros((ngame, nvar), dtype="float64")
+        X[np.arange(ngame), double_games["team_index"]] = 1
+        X[np.arange(ngame), double_games["opponent_index"]] = 1
         return X
 
     def get_offense_defense(self, double_games, ratings, weights):
@@ -258,12 +284,12 @@ class LeastSquares(RatingSystem):
         # Create rhs. The relationship GOM=PF-PA is implied but will not
         # strictly hold if GOM is not defined this way. As a workaround, define
         # "psuedo points for" as GOM+PA.
-        pseudo_pf = double_games['GOM'] + double_games['opponent_points']
+        pseudo_pf = double_games["GOM"] + double_games["opponent_points"]
         # For consistency, half of the home court advantage needs to be
         # assigned to each of the two entries for each game.
         if self.homecourt:
-            pseudo_pf -= 0.5 * self.home_adv * double_games['location'].map(loc_map)
-        rhs = ratings[double_games['team_index'].values] - pseudo_pf
+            pseudo_pf -= 0.5 * self.home_adv * double_games["location"].map(loc_map)
+        rhs = ratings[double_games["team_index"].values] - pseudo_pf
 
         defense, _ = fit_linear_least_squares(X, rhs.values, weights=weights)
         # At this point, defense has an implied normalization carried over from
@@ -291,14 +317,18 @@ class LeastSquares(RatingSystem):
         # Series operations in subsquent calculations.  Note that we
         # convert to values first because otherwise we end up with the
         # indexes from self.df_teams, which is not what we want.
-        y = pd.Series(self.df_teams.loc[games['team_id'],'rating'].values - self.df_teams.loc[games['opponent_id'],'rating'].values, index=games.index)
-        if self.homecourt and 'location' in games:
-            y += games['location'].map(loc_map) * self.home_adv
+        y = pd.Series(
+            self.df_teams.loc[games["team_id"], "rating"].values
+            - self.df_teams.loc[games["opponent_id"], "rating"].values,
+            index=games.index,
+        )
+        if self.homecourt and "location" in games:
+            y += games["location"].map(loc_map) * self.home_adv
         return y
 
     def predict_result(self, games):
         y = self.predict_game_outcome_measure(games)
-        return y.apply(lambda gom: 'W' if gom > 0.0 else 'L')
+        return y.apply(lambda gom: "W" if gom > 0.0 else "L")
 
     def predict_win_probability(self, games):
         """Predict win probability for each game in DataFrame
@@ -310,9 +340,9 @@ class LeastSquares(RatingSystem):
 
         """
         # Gracefully handle case where sigma is not defined:
-        if not self.full_rank or not hasattr(self, 'sigma'):
+        if not self.full_rank or not hasattr(self, "sigma"):
             return np.nan
-        
+
         mu = self.predict_game_outcome_measure(games)
 
         # Get terms that account for parameter uncertainty:
@@ -330,7 +360,9 @@ class LeastSquares(RatingSystem):
             # This might happen if there are not enough games played
             raise LeastSquaresError("leverage value greater than 1")
         loo_resids = self.residuals / (1.0 - self.leverages)
-        loo_gom_preds = self.single_games.loc[self.single_games['train'],'GOM'] - loo_resids
+        loo_gom_preds = (
+            self.single_games.loc[self.single_games["train"], "GOM"] - loo_resids
+        )
         return loo_gom_preds
 
     def store_leave_one_out_predicted_results(self):
@@ -340,32 +372,36 @@ class LeastSquares(RatingSystem):
         except LeastSquaresError as e:
             print(e)
         else:
-            loo_results = ['W' if gom > 0.0 else 'L' for gom in loo_gom_preds]
+            loo_results = ["W" if gom > 0.0 else "L" for gom in loo_gom_preds]
 
-            self.single_games.loc[self.single_games['train'],'loo_predicted_result'] = loo_results
+            self.single_games.loc[
+                self.single_games["train"], "loo_predicted_result"
+            ] = loo_results
 
     def strength_of_schedule(self, ratings):
         return np.mean(ratings)
 
     def standard_normal_residuals_plot(self):
         """Plot empirical CDF of residuals on normal probability paper"""
+
         def get_ecdf(x):
             xs = np.sort(x)
             n = len(x)
-            fhat = np.array([ (i+1.0-0.5)/n for i in range(n)])
+            fhat = np.array([(i + 1.0 - 0.5) / n for i in range(n)])
             return xs, fhat
+
         xs, fhat = get_ecdf(self.residuals)
-        z = scipy.stats.norm.isf(1.0-fhat)
+        z = scipy.stats.norm.isf(1.0 - fhat)
         f, ax = plt.subplots()
-        ax.plot(xs, z, 'o')
-        ax.set_xlabel('Residual')
-        ax.set_ylabel('Standard Normal')
+        ax.plot(xs, z, "o")
+        ax.set_xlabel("Residual")
+        ax.set_ylabel("Standard Normal")
         ax.grid()
 
     def plot_residuals_vs_predictions(self):
         f, ax = plt.subplots()
-        preds = self.single_games['GOM'] - self.residuals
-        ax.plot(preds, self.residuals, 'o')
-        ax.set_xlabel('Predicted GOM')
-        ax.set_ylabel('Residual')
+        preds = self.single_games["GOM"] - self.residuals
+        ax.plot(preds, self.residuals, "o")
+        ax.set_xlabel("Predicted GOM")
+        ax.set_ylabel("Residual")
         ax.grid()

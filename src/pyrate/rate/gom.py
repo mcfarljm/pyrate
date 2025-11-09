@@ -21,7 +21,7 @@ class GameOutcomeMeasure:
 
     def plot(self, ub=None, lb=0):
         if ub is None:
-            if hasattr(self, 'max_point_diff'):
+            if hasattr(self, "max_point_diff"):
                 ub = self.max_point_diff
             else:
                 ub = 20
@@ -29,18 +29,22 @@ class GameOutcomeMeasure:
         xvals = np.linspace(lb, ub, 200)
         f, ax = plt.subplots()
         ax.plot(xvals, self(xvals))
-        xpoints = np.arange(lb, ub+1)
-        ax.plot(xpoints, self(xpoints), 'o')
+        xpoints = np.arange(lb, ub + 1)
+        ax.plot(xpoints, self(xpoints), "o")
         ax.grid()
-        ax.set_xlabel('Point difference')
-        ax.set_ylabel('Game outcome measure')
+        ax.set_xlabel("Point difference")
+        ax.set_ylabel("Game outcome measure")
+
 
 class PointDifference(GameOutcomeMeasure):
     supports_off_def = True
+
     def __init__(self):
         pass
+
     def __call__(self, point_diff):
         return point_diff
+
 
 class CappedPointDifference(GameOutcomeMeasure):
     def __init__(self, cap=15):
@@ -49,8 +53,10 @@ class CappedPointDifference(GameOutcomeMeasure):
             self.supports_off_def = True
         else:
             self.supports_off_def = False
+
     def __call__(self, point_diff):
         return np.sign(point_diff) * np.fmin(self.max_point_diff, np.abs(point_diff))
+
 
 class BetaCurve(GameOutcomeMeasure):
     def __init__(self, max_point_diff=20, gom_at_1=3, max_gom=None):
@@ -71,12 +77,14 @@ class BetaCurve(GameOutcomeMeasure):
 
         normed_gom_at_1 = gom_at_1 / float(max_gom)
         xval = 1.0 / max_point_diff
+
         def root_func(alpha):
-            return scipy.stats.beta.cdf(xval, alpha, 1.0/alpha) - normed_gom_at_1
+            return scipy.stats.beta.cdf(xval, alpha, 1.0 / alpha) - normed_gom_at_1
+
         sol = scipy.optimize.root_scalar(root_func, bracket=[0.05, 10.0])
 
         self.alpha = sol.root
-        self.beta = 1.0/self.alpha
+        self.beta = 1.0 / self.alpha
         self.max_point_diff = max_point_diff
         self.max_gom = max_gom
         self.rv = scipy.stats.beta(self.alpha, self.beta, scale=self.max_point_diff)
@@ -85,8 +93,8 @@ class BetaCurve(GameOutcomeMeasure):
         return np.sign(point_diff) * self.max_gom * self.rv.cdf(np.abs(point_diff))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     gom = BetaCurve()
-    print('alpha:', gom.alpha)
+    print("alpha:", gom.alpha)
     gom.plot()
     plt.show()
