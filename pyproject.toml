@@ -37,3 +37,9 @@ select = [
     # isort
     "I",
 ]
+
+ignore = [
+    "E501",  # Line length, todo
+    "E731",  # Todo: Use def instead of lambda
+    "B905",  # Todo: use `strict` with zip
+]

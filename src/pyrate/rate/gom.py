@@ -6,7 +6,7 @@ import scipy.stats
 
 try:
     import matplotlib.pyplot as plt
-except:
+except ImportError:
     pass
 
 

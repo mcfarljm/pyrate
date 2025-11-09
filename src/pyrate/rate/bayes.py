@@ -74,7 +74,8 @@ class Bayes(rb.RatingSystm):
             team_node.logp_samp = np.empty(nsamp)
 
         for isamp in range(nsamp+nburn):
-            if isamp%100==0: print(isamp)
+            if isamp%100==0:
+                print(isamp)
             for team_node in team_nodes:
                 rating_z = team_node.propose_move()
                 logp_z = calc_log_prior(rating_z)

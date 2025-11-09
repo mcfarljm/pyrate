@@ -14,7 +14,7 @@ def get_db():
     return g.db
 
 def close_db(e=None):
-    db = g.pop('db', None)
+    g.pop('db', None)
     #print('dropping')
 
 def init_app(app):
@@ -22,7 +22,7 @@ def init_app(app):
 
 def date_updated():
     db = get_db()
-    conn = db.connect()
+    db.connect()
     output = db.execute('SELECT Updated from properties;')
     date = pd.to_datetime(output.fetchone()[0])
     return date
