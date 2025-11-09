@@ -437,7 +437,7 @@ class RatingSystem:
             ## properties table (general info)
             today = pd.to_datetime(datetime.datetime.today())
             df = pd.DataFrame({"Updated": [today]})
-            df.to_sql("properties", engine, if_exists="replace", index=False)
+            df.to_sql("properties", conn, if_exists="replace", index=False)
 
             ### ratings table
             # Needs to be handled carefully because previous rating_id
@@ -503,7 +503,7 @@ class RatingSystem:
 
             df.to_sql(
                 "teams",
-                engine,
+                conn,
                 if_exists="append",
                 index=False,
                 dtype={
@@ -553,7 +553,7 @@ class RatingSystem:
 
             df.to_sql(
                 "games",
-                engine,
+                conn,
                 if_exists="append",
                 index=False,
                 dtype={
@@ -575,7 +575,7 @@ class RatingSystem:
 
             df.to_sql(
                 "games",
-                engine,
+                conn,
                 if_exists="append",
                 index=False,
                 dtype={
