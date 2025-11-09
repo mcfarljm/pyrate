@@ -22,6 +22,9 @@ dev = [
     "ruff>=0.14.4",
 ]
 
+[tool.ruff]
+include = ["pyproject.toml", "src/**/*.py", "tests/**/*.py"]
+
 [tool.ruff.lint]
 select = [
     # pycodestyle
@@ -42,3 +45,6 @@ ignore = [
     "E501",  # Line length, todo
     "B905",  # Todo: use `strict` with zip
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"schema.py" = ["E501"] # Line length
