@@ -7,18 +7,18 @@ PyRate is a Python package for sports ratings. It is intended to provide a simpl
 Install:
 
 ``` shell
-python setup.py install
+uv sync
 ```
 
 Run the tests:
 
 ``` shell
-python -m unittest
+uv run python -m unittest
 ```
 
 ## Usage
 
-To get started, see the example script [here](examples/pyrate_update.py). This script retrieves score and schedule data from www.masseyratings.com, fits least-squares ratings, and writes the ratings to a database file. To launch a website, copy the database to `pyrate/flaskr/static/pyrate.db` and then run `FLASK_APP=flaskr flask run` from the `pyrate/` directory. See an example website at www.mcfarlandratings.com.
+To get started, see the example script [here](examples/pyrate_update.py). This script retrieves score and schedule data from www.masseyratings.com, fits least-squares ratings, and writes the ratings to a database file. To launch a website, copy the database to `pyrate/flaskr/static/pyrate.db` and then run `FLASK_APP=flaskr flask run` from the `pyrate/` directory.
 
 Options for customizing the rating system (such as whether home court advantage is included, use of a custom game outcome measure, etc.) can be found within the API's for the specific rating system classes in [leastsquares.py](pyrate/rate/leastsquares.py) and [mle.py](pyrate/rate/mle.py).
 
