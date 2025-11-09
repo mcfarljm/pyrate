@@ -277,7 +277,7 @@ class RatingSystem:
         self.df_teams["strength_of_schedule_past"] = np.nan
         self.df_teams["strength_of_schedule_future"] = np.nan
         self.df_teams["strength_of_schedule_all"] = np.nan
-        for team_id, team in self.df_teams.iterrows():
+        for team_id in self.df_teams.index:
             games = self.double_games[self.double_games["team_id"] == team_id]
             schedule = self.double_schedule[self.double_schedule["team_id"] == team_id]
             self.df_teams.at[team_id, "strength_of_schedule_past"] = (
@@ -401,7 +401,7 @@ class RatingSystem:
 
         pred_probs = self.predict_win_probability(games)
         pred_outcomes = ["W" if p > 0.5 else "L" for p in pred_probs]
-        for p, wl, (index, game) in zip(pred_probs, pred_outcomes, games.iterrows()):
+        for p, wl, (_, game) in zip(pred_probs, pred_outcomes, games.iterrows()):
             if p > 0.5:
                 total_count += 1
                 # Determine interval
