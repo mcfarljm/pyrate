@@ -205,7 +205,7 @@ class LeaveOneOutPredictions(unittest.TestCase):
         actual_loo_preds = pd.Series([get_actual_LOO_pred(index) for index in self.raw_df.index], index=self.raw_df.index)
         actual_loo_preds.sort_index(inplace=True)
 
-        for index, loo_actual in actual_loo_preds.iteritems():
+        for index, loo_actual in actual_loo_preds.items():
             self.assertAlmostEqual(loo_actual, loo_preds[index])
 
     def testLeaveOneOut(self):
