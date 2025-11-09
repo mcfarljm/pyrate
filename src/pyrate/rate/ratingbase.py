@@ -5,6 +5,7 @@ import datetime
 import numpy as np
 import pandas as pd
 import sqlalchemy.types as sqlt
+from sqlalchemy import text
 
 from pyrate.db.schema import schema
 
@@ -412,9 +413,7 @@ class RatingSystem:
         print("Total count:", total_count)
         for i, p in enumerate(pvals):
             coverage = float(correct[i]) / counts[i]
-            print(
-                f"Coverage for {p}: {correct[i]} / {counts[i]} ({coverage:.2})"
-            )
+            print(f"Coverage for {p}: {correct[i]} / {counts[i]} ({coverage:.2})")
 
     def to_db(self, engine, rating_name, finished=False):
         """Write to database
@@ -433,7 +432,7 @@ class RatingSystem:
 
         with engine.connect() as conn:
             for s in schema.split("\n\n"):
-                conn.execute(s)
+                conn.execute(text(s))
 
             ## properties table (general info)
             today = pd.to_datetime(datetime.datetime.today())
@@ -448,14 +447,18 @@ class RatingSystem:
 
             # Check whether rating exists:
             output = conn.execute(
-                "SELECT rating_id FROM ratings WHERE name=?", (rating_name,)
+                text("SELECT rating_id FROM ratings WHERE name=:name"),
+                {"name": rating_name},
             )
             result = output.fetchone()
             if result:
                 rating_id = result[0]
             else:
-                conn.execute("INSERT INTO ratings (name) VALUES (?);", (rating_name,))
-                output = conn.execute("SELECT last_insert_rowid();")
+                conn.execute(
+                    text("INSERT INTO ratings (name) VALUES (:name);"),
+                    {"name": rating_name},
+                )
+                output = conn.execute(text("SELECT last_insert_rowid();"))
                 rating_id = output.fetchone()[0]
 
             # Now update rating_id with new data.  Re-using the
@@ -466,17 +469,25 @@ class RatingSystem:
             n_games = len(self.double_games) // 2
             n_scheduled = len(self.double_schedule) // 2
             Rsquared = self.Rsquared if hasattr(self, "Rsquared") else None
+            query = """
+            UPDATE ratings SET home_advantage = :home_adv,
+              r_squared = :r_squared,
+              consistency= :consistency,
+              games_played = :games_played,
+              games_scheduled = :games_scheduled,
+              finished = :finished
+            WHERE rating_id = :rating_id;"""
             conn.execute(
-                "UPDATE ratings SET home_advantage = ?, r_squared = ?, consistency=?, games_played = ?, games_scheduled = ?, finished = ? WHERE rating_id = ?;",
-                (
-                    self.home_adv,
-                    Rsquared,
-                    self.consistency,
-                    n_games,
-                    n_scheduled,
-                    finished,
-                    rating_id,
-                ),
+                text(query),
+                {
+                    "home_adv": self.home_adv,
+                    "r_squared": Rsquared,
+                    "consistency": self.consistency,
+                    "games_played": n_games,
+                    "games_scheduled": n_scheduled,
+                    "finished": finished,
+                    "rating_id": rating_id,
+                },
             )
 
             ### teams table
@@ -485,7 +496,10 @@ class RatingSystem:
             df["team_id"] = df.index
 
             # First delete previous entries for this league:
-            conn.execute("DELETE FROM teams WHERE rating_id=?;", (rating_id,))
+            conn.execute(
+                text("DELETE FROM teams WHERE rating_id=:rating_id;"),
+                {"rating_id": rating_id},
+            )
 
             df.to_sql(
                 "teams",
@@ -532,7 +546,10 @@ class RatingSystem:
             )
 
             # First delete previous entries for this league:
-            conn.execute("DELETE FROM games WHERE rating_id=?;", (rating_id,))
+            conn.execute(
+                text("DELETE FROM games WHERE rating_id=:rating_id"),
+                {"rating_id": rating_id},
+            )
 
             df.to_sql(
                 "games",
