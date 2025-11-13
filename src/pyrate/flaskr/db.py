@@ -11,7 +11,7 @@ from pyrate.rate.ratingbase import rank_array
 def get_db():
     if "db" not in g:
         # print('creating')
-        g.db = sqlalchemy.create_engine(current_app.config["DATABASE"])
+        g.db = sqlalchemy.create_engine(current_app.config["DATABASE_URI"])
     return g.db
 
 

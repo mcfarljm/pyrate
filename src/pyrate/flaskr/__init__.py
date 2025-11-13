@@ -8,14 +8,14 @@ from . import db
 
 
 def create_app(test_config=None):
-    # create and configure the app
+    app = Flask(__name__, instance_relative_config=True)
+
+    # Default database path:
     db_path = os.path.join(os.path.dirname(__file__), "static", "pyrate.db")
     db_uri = f"sqlite:///{db_path}"
+    app.config["DATABASE_URI"] = db_uri
 
-    app = Flask(__name__, instance_relative_config=True)
-    app.config.from_mapping(
-        DATABASE=db_uri,
-    )
+    app.config.from_prefixed_env()  # Grab FLASK_DATABASE_URI env var
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
