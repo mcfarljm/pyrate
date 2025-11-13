@@ -483,12 +483,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "flask", specifier = ">=3.1.2" },
-    { name = "numpy", specifier = ">=2.3.4" },
-    { name = "pandas", specifier = ">=2.3.3" },
-    { name = "scipy", specifier = ">=1.16.3" },
+    { name = "flask", specifier = ">=3.1.0" },
+    { name = "numpy", specifier = ">=2.2.5" },
+    { name = "pandas", specifier = ">=2.2.3" },
+    { name = "scipy", specifier = ">=1.15.3" },
     { name = "sportsipy", marker = "extra == 'sportsipy'", specifier = ">=0.6.0" },
-    { name = "sqlalchemy", specifier = ">=2.0.44" },
+    { name = "sqlalchemy", specifier = ">=2.0.40" },
 ]
 provides-extras = ["sportsipy"]
 
