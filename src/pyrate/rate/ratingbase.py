@@ -430,7 +430,7 @@ class RatingSystem:
             Flag for whether the season is finished, used by website.
         """
 
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             for s in schema.split("\n\n"):
                 conn.execute(text(s))
 
