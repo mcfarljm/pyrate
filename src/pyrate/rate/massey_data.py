@@ -86,6 +86,7 @@ def _league_from_massey_hyper_csv(games_file, teams_file):
 
 
 def _league_from_massey_games_csv(games_file, teams_file):
+    storage_options = {"User-Agent": "Mozilla/9.0"}
     df = pd.read_csv(
         games_file,
         names=[
@@ -99,6 +100,7 @@ def _league_from_massey_games_csv(games_file, teams_file):
             "opponent_points",
         ],
         header=None,
+        storage_options=storage_options,
     )
     df["location"] = df["location"].map(loc_map)
     df["opponent_location"] = df["opponent_location"].map(loc_map)
@@ -107,6 +109,11 @@ def _league_from_massey_games_csv(games_file, teams_file):
     scheduled = (df["points"] == 0) & (df["opponent_points"] == 0)
     df.loc[scheduled, ["points", "opponent_points"]] = np.nan  # Flag scheduled games
     df_teams = pd.read_csv(
-        teams_file, index_col=0, header=None, names=["name"], skipinitialspace=True
+        teams_file,
+        index_col=0,
+        header=None,
+        names=["name"],
+        skipinitialspace=True,
+        storage_options=storage_options,
     )
     return ratingbase.League(df, df_teams=df_teams, duplicated_games=False)
